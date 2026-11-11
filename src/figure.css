@@ -1,0 +1,81 @@
+/* Le personnage animé. Les couleurs viennent de variables pour s'adapter à chaque discipline. */
+.figure {
+  display: block;
+  width: 100%;
+  height: auto;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fig-ground {
+  stroke: var(--fig-ground, #2f3942);
+  stroke-width: 2;
+}
+
+.fig-prop {
+  stroke: var(--fig-prop, #55616c);
+  stroke-width: 5;
+}
+
+.fig-prop.thin {
+  stroke-width: 2.5;
+}
+
+.fig-box {
+  fill: var(--fig-box, #2a333c);
+  stroke: var(--fig-prop, #55616c);
+  stroke-width: 2;
+}
+
+.fig-bar {
+  fill: var(--fig-prop, #55616c);
+}
+
+.fig-far path {
+  stroke: var(--fig-far, #7d8994);
+  stroke-width: 8;
+}
+
+/* De face, les deux côtés du corps sont au même plan. */
+.fig-far.is-front path {
+  stroke: var(--fig-body, #f3f6f8);
+}
+
+.fig-body {
+  stroke: var(--fig-body, #f3f6f8);
+}
+
+.fig-body circle {
+  fill: var(--fig-body, #f3f6f8);
+  stroke: none;
+}
+
+.fig-torso {
+  stroke-width: 13;
+}
+
+.fig-cut path {
+  stroke: var(--fig-bg, #14191e);
+  stroke-width: 12.5;
+}
+
+.fig-near path {
+  stroke: var(--fig-body, #f3f6f8);
+  stroke-width: 8.5;
+}
+
+.figure .fig-foot {
+  stroke-width: 7;
+}
+
+.fig-band {
+  stroke: var(--fig-accent, #d95926);
+  stroke-width: 3;
+  stroke-dasharray: 1 5.5;
+}
+
+.fig-club {
+  stroke: var(--fig-accent, #199e70);
+  stroke-width: 3;
+}
