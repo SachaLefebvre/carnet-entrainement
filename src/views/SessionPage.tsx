@@ -7,6 +7,8 @@ import { go, href } from '../lib/router';
 import { formatClock, formatKm, formatMinutes, parseClock } from '../lib/stats';
 import { getEntry, updateEntry, useStore } from '../lib/store';
 import { Icon, kindStyle, TopBar } from '../ui';
+import { SKILL_BY_ID, type Skill } from '../data/skills';
+import { skillState, stepProgress } from '../lib/skills';
 import { resumableSession } from './Player';
 
 export function SessionPage({ day, id }: { day: string; id: string }) {
@@ -45,6 +47,13 @@ export function SessionPage({ day, id }: { day: string; id: string }) {
   };
 
   const recorded = Object.entries(entry.data.sets ?? {});
+  const readySkills = session.blocks
+    .map((block) => (block.skill ? SKILL_BY_ID[block.skill] : undefined))
+    .filter((skill): skill is Skill => Boolean(skill))
+    .filter((skill) => {
+      const progress = stepProgress(entries, skill, skillState(entries, skill));
+      return progress.ready && !progress.last;
+    });
 
   return (
     <main className="screen has-action" style={kindStyle(session.kind)}>
@@ -120,9 +129,25 @@ export function SessionPage({ day, id }: { day: string; id: string }) {
         </section>
       )}
 
+      {readySkills.map((skill) => (
+        <a key={skill.id} className="callout ready-callout" href={href('figure', skill.id)}>
+          <span className="callout-title">{skill.name} : objectif atteint</span>
+          <span className="muted">Tu peux passer à l’étape suivante. Ouvre la figure pour valider.</span>
+        </a>
+      ))}
+
       {session.blocks.map((block) => (
         <section key={block.title}>
-          <h2 className="section-title">{block.title}</h2>
+          {block.skill ? (
+            <div className="section-head">
+              <h2 className="section-title">{block.title}</h2>
+              <a className="text-link" href={href('figure', block.skill)}>
+                Ma progression
+              </a>
+            </div>
+          ) : (
+            <h2 className="section-title">{block.title}</h2>
+          )}
           <div className="stack tight">
             {block.items.map((item, i) => {
               const exercise = EXERCISES[item.ex];

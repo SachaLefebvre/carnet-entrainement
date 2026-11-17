@@ -14,6 +14,10 @@ export interface EntryData {
   timeSec?: number;
   /** Résultat d'un test. */
   value?: number;
+  /** Figure : étape choisie ce jour-là (à partir de 0). */
+  level?: number;
+  /** Figure : réponses au diagnostic, de 0 (point faible) à 2 (acquis), par verrou. */
+  answers?: Record<string, number>;
 }
 
 export interface Entry {
@@ -74,6 +78,9 @@ function persist() {
 }
 
 export const entryKey = (day: string, itemId: string) => `${day}|${itemId}`;
+
+/** Les entrées actuelles, pour les calculs faits hors des composants (programme du jour). */
+export const getEntries = (): Entries => entries;
 
 const EMPTY: Entry = { done: false, note: '', data: {}, updatedAt: '' };
 

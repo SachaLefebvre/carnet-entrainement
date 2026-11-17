@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Figure } from '../components/Figure';
 import { EXERCISES } from '../data/exercises';
 import { findSession, type Item, type Phase, type Session } from '../data/programme';
@@ -118,6 +118,96 @@ function useCountdown(key: unknown, seconds: number, autoStart: boolean, onDone:
       setRemaining((r) => r + extra);
     },
   };
+}
+
+/** Chrono qui monte, pour les tenues au maximum. Signal sonore quand l'objectif est atteint. */
+function useStopwatch(key: unknown, goal: number) {
+  const [elapsed, setElapsed] = useState(0);
+  const [running, setRunning] = useState(false);
+  const startAt = useRef(0);
+  const signaled = useRef(false);
+
+  useEffect(() => {
+    setElapsed(0);
+    setRunning(false);
+    signaled.current = false;
+  }, [key]);
+
+  useEffect(() => {
+    if (!running) return;
+    const timer = setInterval(() => {
+      const value = (Date.now() - startAt.current) / 1000;
+      setElapsed(value);
+      if (!signaled.current && value >= goal) {
+        signaled.current = true;
+        beep(990, 320);
+        buzz([120, 60, 120]);
+      }
+    }, 200);
+    return () => clearInterval(timer);
+  }, [running, goal, key]);
+
+  return {
+    elapsed,
+    running,
+    start: () => {
+      startAt.current = Date.now();
+      setRunning(true);
+    },
+    stop: () => {
+      setRunning(false);
+      return Math.round((Date.now() - startAt.current) / 1000);
+    },
+  };
+}
+
+interface MaxHoldProps {
+  item: Item;
+  stepKey: string;
+  stage: ReactNode;
+  head: ReactNode;
+  help: ReactNode;
+  onDone: (record?: { ex: string; value: number }) => void;
+}
+
+function MaxHold({ item, stepKey, stage, head, help, onDone }: MaxHoldProps) {
+  const goal = item.hold ?? 0;
+  const watch = useStopwatch(stepKey, goal);
+  const reached = watch.elapsed >= goal;
+  return (
+    <>
+      {stage}
+      <div className="player-body">
+        {head}
+        <div className="timer-row">
+          <Ring value={watch.elapsed / goal} size={150} stroke={10} label={`${Math.floor(watch.elapsed)} secondes tenues, objectif ${goal}`}>
+            <span className="ring-big num">{Math.floor(watch.elapsed)}</span>
+            <span className="ring-unit">{reached ? 'objectif atteint' : `objectif ${goal} s`}</span>
+          </Ring>
+        </div>
+        <p className="muted small">Tiens tant que la position reste propre, puis arrête le chrono : ton temps réel est noté et sert à suivre ta progression.</p>
+        {item.note && <p className="muted small">{item.note}</p>}
+        {help}
+      </div>
+      <div className="player-actions">
+        {!watch.running ? (
+          <>
+            <button type="button" className="button primary" onClick={watch.start}>
+              <Icon name="play" size={20} />
+              Lancer le chrono
+            </button>
+            <button type="button" className="button ghost" onClick={() => onDone()}>
+              Passer
+            </button>
+          </>
+        ) : (
+          <button type="button" className="button primary" onClick={() => onDone({ ex: item.ex, value: watch.stop() })}>
+            Arrêter à {Math.floor(watch.elapsed)} s
+          </button>
+        )}
+      </div>
+    </>
+  );
 }
 
 function target(item: Item): string {
@@ -263,21 +353,52 @@ function WorkStep({ step, onDone }: { step: Extract<Step, { type: 'work' }>; onD
   const [reps, setReps] = useState(item.reps ?? 0);
   const [help, setHelp] = useState(false);
   const hold = item.hold ?? 0;
-  const timer = useCountdown(`${item.ex}-${step.set}-${step.side}`, hold, false, () => onDone({ ex: item.ex, value: hold }));
+  const stepKey = `${item.ex}-${step.set}-${step.side}`;
+  const timer = useCountdown(stepKey, hold, false, () => onDone({ ex: item.ex, value: hold }));
   const started = hold > 0 && (timer.running || timer.remaining < hold);
+
+  const stage = (
+    <div className="stage">
+      <Figure anim={exercise.anim} playing label={`Démonstration : ${exercise.name}`} />
+    </div>
+  );
+  const head = (
+    <>
+      <p className="overline">{step.block}</p>
+      <h1>{exercise.name}</h1>
+      <p className="set-line">
+        {item.sets > 1 ? `Série ${step.set} sur ${item.sets}` : 'Une seule série'}
+        {step.side ? `, ${step.side.toLowerCase()}` : ''}
+      </p>
+    </>
+  );
+  const helpBox = (
+    <>
+      <button type="button" className="text-link as-button" aria-expanded={help} onClick={() => setHelp(!help)}>
+        {help ? 'Masquer les consignes' : 'Voir les consignes'}
+      </button>
+      {help && (
+        <div className="help">
+          <ol>
+            {exercise.steps.map((text) => (
+              <li key={text}>{text}</li>
+            ))}
+          </ol>
+          <p>
+            <strong>À éviter.</strong> {exercise.avoid}
+          </p>
+        </div>
+      )}
+    </>
+  );
+
+  if (item.max && hold > 0) return <MaxHold item={item} stepKey={stepKey} stage={stage} head={head} help={helpBox} onDone={onDone} />;
 
   return (
     <>
-      <div className="stage">
-        <Figure anim={exercise.anim} playing label={`Démonstration : ${exercise.name}`} />
-      </div>
+      {stage}
       <div className="player-body">
-        <p className="overline">{step.block}</p>
-        <h1>{exercise.name}</h1>
-        <p className="set-line">
-          {item.sets > 1 ? `Série ${step.set} sur ${item.sets}` : 'Une seule série'}
-          {step.side ? `, ${step.side.toLowerCase()}` : ''}
-        </p>
+        {head}
 
         {hold > 0 ? (
           <div className="timer-row">
@@ -293,21 +414,7 @@ function WorkStep({ step, onDone }: { step: Extract<Step, { type: 'work' }>; onD
           </>
         )}
 
-        <button type="button" className="text-link as-button" aria-expanded={help} onClick={() => setHelp(!help)}>
-          {help ? 'Masquer les consignes' : 'Voir les consignes'}
-        </button>
-        {help && (
-          <div className="help">
-            <ol>
-              {exercise.steps.map((text) => (
-                <li key={text}>{text}</li>
-              ))}
-            </ol>
-            <p>
-              <strong>À éviter.</strong> {exercise.avoid}
-            </p>
-          </div>
-        )}
+        {helpBox}
       </div>
 
       <div className="player-actions">

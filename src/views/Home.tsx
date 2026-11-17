@@ -4,6 +4,8 @@ import { href } from '../lib/router';
 import { dayCount, percent, streaks, tally } from '../lib/stats';
 import { getEntry, useStore } from '../lib/store';
 import { Icon, kindStyle, Ring, SessionCard } from '../ui';
+import { SKILLS } from '../data/skills';
+import { SkillCard } from './Figures';
 import { resumableSession } from './Player';
 
 function greeting() {
@@ -99,6 +101,18 @@ export function Home() {
           </div>
         </>
       )}
+
+      <div className="section-head">
+        <h2 className="section-title">Tes figures</h2>
+        <a className="text-link" href={href('figures')}>
+          Tout voir
+        </a>
+      </div>
+      <div className="stack" style={kindStyle('muscu')}>
+        {SKILLS.map((skill) => (
+          <SkillCard key={skill.id} skill={skill} entries={entries} compact />
+        ))}
+      </div>
 
       <div className="section-head">
         <h2 className="section-title">Cette semaine</h2>

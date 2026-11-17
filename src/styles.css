@@ -15,6 +15,10 @@
   --filet: #199e70;
   --mobilite: #c98500;
   --k: var(--text);
+  /* Les trois verrous d'une figure. Palette validée (bande de luminance, daltonisme, contraste). */
+  --lock-0: #5b8def;
+  --lock-1: #d4702e;
+  --lock-2: #25a676;
   --heat-0: #232b33;
   --heat-1: #4a545d;
   --heat-2: #7d8891;
@@ -1473,7 +1477,7 @@ h1 {
   position: fixed;
   inset: auto 0 0 0;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   padding-bottom: env(safe-area-inset-bottom);
   background: color-mix(in srgb, var(--bg) 92%, transparent);
   backdrop-filter: blur(12px);
@@ -1503,11 +1507,423 @@ h1 {
 
   .tabs {
     justify-content: center;
-    grid-template-columns: repeat(4, 150px);
+    grid-template-columns: repeat(5, 130px);
   }
 
   .grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Figures */
+
+.text-strong {
+  color: var(--text);
+  font-weight: 680;
+}
+
+.skill-card {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 10px 14px 12px 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  text-decoration: none;
+}
+
+.skill-card .session-thumb .figure {
+  height: 70px;
+}
+
+.skill-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.step-dots {
+  display: flex;
+  gap: 4px;
+  margin: 7px 0 6px;
+}
+
+.step-dots span {
+  width: 18px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--surface-2);
+}
+
+.step-dots .is-done {
+  background: var(--muted);
+}
+
+.step-dots .is-current {
+  background: var(--k);
+}
+
+.ready-tag,
+.todo-tag {
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 0.8rem;
+  font-weight: 680;
+}
+
+.ready-tag {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.todo-tag {
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.mini-progress {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.mini-progress .bar-track {
+  grid-column: auto;
+}
+
+.ready-panel {
+  border-color: var(--k);
+}
+
+.ready-callout {
+  display: flex;
+  flex-direction: column;
+  border-left-color: var(--k);
+  text-decoration: none;
+}
+
+.current-step .stage {
+  border-radius: 14px;
+  margin-bottom: 12px;
+}
+
+.step-name {
+  margin: 0 0 4px;
+  font-size: 1.5rem;
+  font-weight: 760;
+  font-stretch: 82%;
+}
+
+.goal-progress {
+  margin-top: 14px;
+}
+
+.goal-progress .readout {
+  margin: 0 0 8px;
+}
+
+.goal-progress .bar-track {
+  display: block;
+}
+
+.skill-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.chart-axis {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.chart-goal {
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
+
+.chart-tick,
+.chart-goal-label {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.spark-dot.is-goal {
+  fill: var(--k);
+}
+
+.spark-dot.is-goal.is-active {
+  fill: var(--text);
+}
+
+.ladder {
+  display: grid;
+  gap: 8px;
+}
+
+.ladder li {
+  display: grid;
+  grid-template-columns: 30px 56px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 8px 12px 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.ladder li.is-current {
+  border-color: var(--k);
+}
+
+.ladder li.is-next {
+  opacity: 0.75;
+}
+
+.ladder-dot {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-2);
+  font-weight: 760;
+  font-size: 0.9rem;
+}
+
+.ladder .is-done .ladder-dot,
+.ladder li.is-done .ladder-dot {
+  background: var(--muted);
+  color: var(--bg);
+}
+
+.ladder li.is-current .ladder-dot {
+  background: var(--k);
+  color: var(--bg);
+}
+
+.ladder-thumb {
+  --fig-bg: var(--surface-2);
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 2px;
+}
+
+.ladder-thumb .figure {
+  height: 48px;
+}
+
+.ladder-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.ladder-name {
+  font-weight: 680;
+}
+
+.ladder-meta {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.ladder .text-link.as-button {
+  padding: 4px 0 0;
+  font-size: 0.84rem;
+}
+
+.ladder-confirm {
+  display: flex;
+  gap: 16px;
+}
+
+.muted-link {
+  color: var(--muted);
+}
+
+.lock-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 8px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--lc) 18%, var(--surface));
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.lock-chip::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--lc);
+}
+
+.question {
+  border-top: 3px solid var(--lc);
+}
+
+.question-text {
+  margin: 10px 0 4px;
+  font-weight: 640;
+}
+
+.options {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.options button {
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  text-align: left;
+  font-weight: 560;
+}
+
+.options button[aria-pressed='true'] {
+  border-color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--text);
+  background: var(--surface-2);
+}
+
+.prio {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.prio li {
+  display: grid;
+  gap: 4px;
+}
+
+.prio-n {
+  font-size: 0.8rem;
+}
+
+.saved-line {
+  margin-top: 14px;
+  font-weight: 650;
+}
+
+.prose {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  color: var(--muted);
+}
+
+.lock-cards {
+  display: grid;
+  gap: 10px;
+}
+
+.lock-card {
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--lc);
+  border-radius: 6px 14px 14px 6px;
+}
+
+.lock-name {
+  font-weight: 760;
+  font-stretch: 85%;
+  font-size: 1.15rem;
+  text-transform: uppercase;
+}
+
+.load-bars {
+  display: grid;
+  gap: 12px;
+}
+
+.load-bars li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 10px;
+}
+
+.load-bars .bar-track {
+  grid-column: 1 / -1;
+}
+
+.callout-p + .callout-p {
+  margin-top: 8px;
+}
+
+.callout-p {
+  color: var(--muted);
+}
+
+.muscle-group .lock-chip {
+  margin-bottom: 10px;
+}
+
+.muscles {
+  display: grid;
+  gap: 8px;
+  font-size: 0.94rem;
+}
+
+.errors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.error-card {
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.error-title {
+  font-weight: 680;
+  margin-bottom: 4px;
+  line-height: 1.25;
+}
+
+.lock-head .section-title {
+  margin-bottom: 6px;
+}
+
+.advice {
+  margin: 6px 0 10px;
+  font-weight: 600;
+}
+
+.assist-row {
+  align-items: start;
+}
+
+.exercise-dose-inline {
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+@media (max-width: 380px) {
+  .errors {
+    grid-template-columns: 1fr;
   }
 }
 

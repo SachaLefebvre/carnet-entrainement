@@ -12,6 +12,7 @@ const ICONS = {
   home: 'M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z',
   calendar: 'M5 6h14v14H5zM5 10h14M9 3v4M15 3v4',
   library: 'M4 9v6M7 6v12M17 6v12M20 9v6M7 12h10',
+  figure: 'M12 3.5a1.75 1.75 0 1 0 0 .01M12 7v6M6 8.5l6 2 6-2M12 13l-4 7M12 13l4 7',
   stats: 'M5 20v-6M12 20V5M19 20v-10',
   back: 'M15 5l-7 7 7 7',
   next: 'M9 5l7 7-7 7',

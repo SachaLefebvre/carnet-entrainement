@@ -6,6 +6,7 @@ import { clearLocal, setUser, useStore, type SyncStatus } from './lib/store';
 import { supabase } from './lib/supabase';
 import { Icon, TopBar } from './ui';
 import { Home } from './views/Home';
+import { Figures, SkillPage } from './views/Figures';
 import { ExercisePage, Library } from './views/Library';
 import { Login } from './views/Login';
 import { Plan } from './views/Plan';
@@ -16,6 +17,7 @@ import { Stats } from './views/Stats';
 const TABS = [
   { route: '', label: 'Accueil', icon: 'home' },
   { route: 'planning', label: 'Planning', icon: 'calendar' },
+  { route: 'figures', label: 'Figures', icon: 'figure' },
   { route: 'exercices', label: 'Exercices', icon: 'library' },
   { route: 'stats', label: 'Stats', icon: 'stats' },
 ] as const;
@@ -65,11 +67,13 @@ export default function App() {
       {head === '' && <Home />}
       {head === 'planning' && <Plan day={a} />}
       {head === 'exercices' && <Library />}
+      {head === 'figures' && <Figures />}
+      {head === 'figure' && a && <SkillPage key={a} id={a} tab={b} />}
       {head === 'stats' && <Stats tab={a} />}
       {head === 'seance' && a && b && <SessionPage key={`${a}-${b}`} day={a} id={b} />}
       {head === 'exercice' && a && <ExercisePage id={a} />}
       {head === 'compte' && <Account email={email} />}
-      {!isTab && !['seance', 'exercice', 'compte'].includes(head) && (
+      {!isTab && !['seance', 'exercice', 'compte', 'figure'].includes(head) && (
         <main className="screen">
           <p className="muted">Cette page n’existe pas.</p>
           <a className="button" href={href()}>

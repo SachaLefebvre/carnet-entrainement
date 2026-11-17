@@ -85,7 +85,149 @@ const run: Anim = {
   still: 0,
 };
 
+// Figures : appui sur deux parallettes (ou deux chaises), mains à hauteur de bassin.
+const PARA: Prop = { t: 'box', x: 92, y: 125, w: 18, h: 50 };
+const SEAT = { hip: [96, 122] as Pt, sh: [100, 82] as Pt, hA: [101, 124] as Pt };
+const SUPPORT_LEGS = { kA: [103, 152] as Pt, fA: [78, 133] as Pt, toeA: 200 };
+const TUCK_LEGS = { kA: [121.4, 104.2] as Pt, fA: [106, 131] as Pt, toeA: 60 };
+const ADV_LEGS = { kA: [127, 122] as Pt, fA: [122, 152.6] as Pt, toeA: 80 };
+const HANDSTAND: Pose = { hip: [100, 92], sh: [100, 132], hA: [100, 173], fA: [100, 30], toeA: -90, head: [0, 1] };
+const WALL_HS: Pose = { hip: [136, 92], sh: [132, 132], hA: [130, 173], fA: [145, 32], toeA: -90, head: [0, 1] };
+const PISTOL_TOP: Pose = { hip: [96, 110], sh: [98, 70], hA: [138, 76], fA: [100, 171], fB: [140, 150], toeA: 0, toeB: -10 };
+const PISTOL_BOTTOM: Pose = { hip: [84, 158], sh: [106, 124], hA: [146, 118], fA: [100, 171], fB: [146, 150], toeA: 0, toeB: -10 };
+
+const pistol: Anim = { frames: [PISTOL_TOP, PISTOL_BOTTOM], knee: [1, -0.6], ms: 1200, pause: 300, still: 1 };
+
 export const ANIMS: Record<string, Anim> = {
+  // Figures : L-sit
+  support: { frames: [{ ...SEAT, ...SUPPORT_LEGS }], props: [PARA] },
+  supportFeet: { frames: [{ ...SEAT, fA: [134, 171], toeA: -75 }], knee: [0, -1], props: [PARA] },
+  supportShrug: {
+    frames: [
+      { ...SEAT, ...SUPPORT_LEGS, eA: [100.5, 103] },
+      { hip: [96, 129], sh: [100, 89], hA: [101, 124], eA: [100.5, 106.5], kA: [103, 159], fA: [78, 140], toeA: 200 },
+    ],
+    ms: 700,
+    pause: 400,
+    props: [PARA],
+  },
+  lsitTuck: { frames: [{ ...SEAT, ...TUCK_LEGS }], props: [PARA] },
+  lsitAdv: { frames: [{ ...SEAT, ...ADV_LEGS }], props: [PARA] },
+  lsitOne: { frames: [{ ...SEAT, fA: [158, 122], toeA: 0, kB: ADV_LEGS.kA, fB: ADV_LEGS.fA, toeB: 80 }], props: [PARA] },
+  lsitFull: { frames: [{ ...SEAT, fA: [158, 122], toeA: 0 }], props: [PARA] },
+  pikeLift: {
+    frames: [
+      { hip: [80, 166], sh: [100, 131], hA: [112, 170], fA: [142, 166], toeA: -80 },
+      { hip: [80, 166], sh: [100, 131], hA: [112, 170], fA: [141, 157], toeA: -60 },
+    ],
+    elbow: [-1, -0.3],
+    ms: 700,
+    pause: 700,
+  },
+  quadSet: {
+    frames: [
+      { hip: [70, 166], sh: [62, 127], hA: [52, 168], fA: [132, 166], toeA: -80 },
+      { hip: [70, 166], sh: [62, 127], hA: [52, 168], fA: [132, 164], toeA: -55 },
+    ],
+    elbow: [1, 0],
+    ms: 600,
+    pause: 1400,
+  },
+  pikeStretch: {
+    frames: [
+      { hip: [70, 166], sh: [80, 127], hA: [112, 160], fA: [132, 166], toeA: -80 },
+      { hip: [70, 166], sh: [106, 148], hA: [134, 162], fA: [132, 166], toeA: -80, head: [1, 0.5] },
+    ],
+    elbow: [0, -1],
+    ms: 1300,
+    pause: 900,
+  },
+
+  // Figures : poirier
+  pikeBox: {
+    frames: [{ hip: [106, 95], sh: [118, 133], hA: [124, 173], fA: [50, 125], toeA: 160, head: [0.2, 1] }],
+    props: [{ t: 'box', x: 26, y: 130, w: 38, h: 45 }],
+  },
+  handstand: {
+    frames: [HANDSTAND, { ...HANDSTAND, hip: [101, 92], fA: [103, 30] }],
+    ms: 1400,
+    pause: 200,
+  },
+  wallToe: {
+    frames: [WALL_HS, { ...WALL_HS, hip: [134, 92], fA: [137, 31] }],
+    knee: [0, -1],
+    ms: 1100,
+    pause: 900,
+    props: [{ t: 'wall', x: 153 }],
+  },
+  handstandShrug: {
+    frames: [
+      { ...WALL_HS, eA: [131, 152.4] },
+      { ...WALL_HS, hip: [136, 99], sh: [132, 139], fA: [145, 39], eA: [131, 156] },
+    ],
+    knee: [0, -1],
+    ms: 800,
+    pause: 400,
+    props: [{ t: 'wall', x: 153 }],
+  },
+  shoulderOpen: {
+    frames: [
+      { hip: [70, 140], sh: [108, 146], eA: [137, 136], hA: [134, 118], kA: [70, 171], fA: [39, 171], toeA: 180, head: [1, 0.3] },
+      { hip: [70, 140], sh: [108, 154], eA: [137, 136], hA: [134, 118], kA: [70, 171], fA: [39, 171], toeA: 180, head: [1, 0.5] },
+    ],
+    ms: 1400,
+    pause: 900,
+    props: [{ t: 'box', x: 132, y: 140, w: 40, h: 35 }],
+  },
+  kickup: {
+    frames: [
+      { hip: [80, 114], sh: [86, 75], hA: [96, 34], fA: [100, 171], fB: [50, 168], toeA: 0, toeB: -10, head: [0.2, -1] },
+      { hip: [100, 96], sh: [116, 133], hA: [118, 173], fA: [98, 160], fB: [62, 62], toeA: 60, toeB: -120, head: [0.3, 1] },
+      { hip: [118, 92], sh: [118, 132], hA: [118, 173], fA: [118, 30], fB: [118, 30], toeA: -90, toeB: -90, head: [0, 1] },
+    ],
+    ms: 650,
+    pause: 350,
+    still: 2,
+  },
+
+  // Figures : pistol squat
+  pistol,
+  pistolNeg: { ...pistol, loop: 'restart', ms: 2600, pause: 0 },
+  pistolBox: {
+    frames: [PISTOL_TOP, { hip: [80, 127], sh: [96, 91], hA: [134, 88], fA: [100, 171], fB: [140, 117], toeA: 0, toeB: -10 }],
+    knee: [1, -0.6],
+    ms: 1200,
+    pause: 300,
+    still: 1,
+    props: [{ t: 'box', x: 44, y: 133, w: 42, h: 42 }],
+  },
+  pistolLow: {
+    frames: [PISTOL_TOP, { hip: [84, 147], sh: [104, 112], hA: [143, 107], fA: [100, 171], fB: [145, 139], toeA: 0, toeB: -10 }],
+    knee: [1, -0.6],
+    ms: 1200,
+    pause: 300,
+    still: 1,
+    props: [{ t: 'box', x: 54, y: 153, w: 38, h: 22 }],
+  },
+  pistolAssist: {
+    frames: [
+      { ...PISTOL_TOP, hA: [136, 86] },
+      { ...PISTOL_BOTTOM, hA: [143, 112] },
+    ],
+    knee: [1, -0.6],
+    ms: 1200,
+    pause: 300,
+    still: 1,
+    props: [
+      { t: 'wall', x: 170 },
+      { t: 'band', from: [170, 76], to: 'hA' },
+    ],
+  },
+  balanceLeg: {
+    frames: [{ hip: [96, 110], sh: [94, 70], hA: [128, 92], fA: [100, 171], fB: [156, 108], toeA: 0, toeB: 0 }],
+    knee: [1, -0.3],
+  },
+
   stand: { frames: [{ hip: [100, 110], sh: [100, 70], hA: [103, 111], fA: [100, 171] }] },
 
   // Haut du corps

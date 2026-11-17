@@ -1,4 +1,5 @@
 import { diffDays, mondayOf, weekday } from '../lib/dates';
+import { skillBlock } from '../lib/skills';
 
 // Lundi de la première semaine du programme.
 export const PROGRAM_START = '2026-11-09';
@@ -31,11 +32,15 @@ export interface Item {
   /** Texte libre quand la dose ne se résume pas à séries x répétitions. */
   label?: string;
   note?: string;
+  /** Tenue au maximum : le chrono continue après l'objectif et note le temps réel. */
+  max?: boolean;
 }
 
 export interface Block {
   title: string;
   items: Item[];
+  /** Figure travaillée dans ce bloc (skills.ts). */
+  skill?: string;
 }
 
 /** Une phase chronométrée d'une séance de course. */
@@ -64,7 +69,7 @@ export function dose(item: Item): string {
   if (item.label) return item.label;
   const side = item.perSide ? ' par côté' : '';
   if (item.minutes) return `${item.minutes} min`;
-  if (item.hold) return `${item.sets} x ${item.hold} s${side}`;
+  if (item.hold) return `${item.sets} x ${item.hold} s${item.max ? ' ou plus' : ''}${side}`;
   return `${item.sets > 1 ? `${item.sets} x ` : ''}${item.reps}${item.sets > 1 ? '' : ' répétitions'}${side}`;
 }
 
@@ -87,131 +92,121 @@ const mobilite: Session = {
   ],
 };
 
-const haut1: Session = {
-  id: 'haut-1',
-  kind: 'muscu',
-  title: 'Haut du corps 1',
-  minutes: 50,
-  anim: 'pullupBand',
-  intro: 'Garde une ou deux répétitions en réserve sur chaque série.',
-  blocks: [
-    { title: 'Poirier', items: [{ ex: 'poirier-mur', sets: 5, hold: 25, rest: 60 }] },
-    {
-      title: 'Force',
-      items: [
-        { ex: 'tractions-assistees', sets: 4, reps: 5, rest: 90 },
-        { ex: 'tractions-negatives', sets: 3, reps: 3, rest: 90, note: 'Descente en 5 secondes.' },
-        { ex: 'pompes', sets: 4, reps: 6, rest: 90 },
-        { ex: 'rowing-elastique', sets: 3, reps: 12, rest: 60 },
-        { ex: 'pike-push-ups', sets: 3, reps: 6, rest: 75 },
-      ],
-    },
-    {
-      title: 'Abdos',
-      items: [
-        { ex: 'hollow-body', sets: 3, hold: 20, rest: 40 },
-        { ex: 'pallof-press', sets: 3, reps: 10, perSide: true, rest: 40 },
-      ],
-    },
-  ],
-};
+/** Durée estimée d'une séance de musculation, arrondie à 5 minutes, échauffement compris. */
+function estimateMinutes(blocks: Block[]): number {
+  let seconds = 5 * 60;
+  for (const item of blocks.flatMap((b) => b.items)) {
+    const sides = item.perSide ? 2 : 1;
+    const work = item.hold ? item.hold * sides : (item.reps ?? 8) * 3.5 * sides;
+    seconds += 45 + item.sets * work + Math.max(0, item.sets - 1) * item.rest;
+  }
+  return Math.max(10, Math.round(seconds / 300) * 5);
+}
 
-const haut2: Session = {
-  id: 'haut-2',
-  kind: 'muscu',
-  title: 'Haut du corps 2',
-  minutes: 45,
-  anim: 'pushup',
-  intro: 'Même règle : une ou deux répétitions en réserve.',
-  blocks: [
-    {
-      title: 'L-sit',
-      items: [
-        { ex: 'l-sit-groupe', sets: 5, hold: 10, rest: 45 },
-        { ex: 'releves-genoux', sets: 4, reps: 8, rest: 60 },
-      ],
-    },
-    {
-      title: 'Force',
-      items: [
-        { ex: 'tractions-supination', sets: 4, reps: 5, rest: 90 },
-        { ex: 'pompes-lentes', sets: 4, reps: 5, rest: 90, note: 'Descente en 3 secondes.' },
-        { ex: 'developpe-epaules', sets: 3, reps: 10, rest: 60 },
-        { ex: 'tirage-visage', sets: 3, reps: 15, rest: 45 },
-      ],
-    },
-    { title: 'Poirier', items: [{ ex: 'poirier-mur', sets: 3, hold: 25, rest: 60 }] },
-    { title: 'Abdos', items: [{ ex: 'gainage-lateral', sets: 3, hold: 30, perSide: true, rest: 30 }] },
-  ],
-};
+/** Un même exercice n'apparaît qu'une fois par séance : le premier bloc qui le contient le garde. */
+function dedupe(blocks: Block[]): Block[] {
+  const seen = new Set<string>();
+  return blocks
+    .map((block) => ({ ...block, items: block.items.filter((item) => (seen.has(item.ex) ? false : (seen.add(item.ex), true))) }))
+    .filter((block) => block.items.length > 0);
+}
 
-const bas1: Session = {
-  id: 'bas-1',
-  kind: 'muscu',
-  title: 'Bas du corps 1 et explosivité',
-  minutes: 55,
-  anim: 'squatjump',
-  intro: 'L’explosivité se travaille frais : chaque saut et chaque sprint à fond, avec un repos complet.',
-  blocks: [
-    {
-      title: 'Explosivité',
-      items: [
-        { ex: 'squat-jumps', sets: 4, reps: 5, rest: 75 },
-        { ex: 'bonds-longueur', sets: 4, reps: 3, rest: 75 },
-        { ex: 'sprints', sets: 6, reps: 1, rest: 90, label: '6 x 8 à 10 s', note: 'Les deux premières semaines : en côte ou à 80 %.' },
-      ],
-    },
-    {
-      title: 'Force',
-      items: [
-        { ex: 'fentes-bulgares', sets: 3, reps: 8, perSide: true, rest: 75 },
-        { ex: 'souleve-une-jambe', sets: 3, reps: 10, perSide: true, rest: 60 },
-        { ex: 'mollets', sets: 3, reps: 15, perSide: true, rest: 45 },
-      ],
-    },
-    {
-      title: 'Abdos',
-      items: [
-        { ex: 'planche', sets: 3, hold: 40, rest: 40 },
-        { ex: 'releves-jambes', sets: 3, reps: 10, rest: 40 },
-      ],
-    },
-  ],
-};
+function muscu(_day: string, base: Omit<Session, 'kind' | 'minutes' | 'blocks'>, blocks: Block[]): Session {
+  const kept = dedupe(blocks);
+  return { ...base, kind: 'muscu', blocks: kept, minutes: estimateMinutes(kept) };
+}
 
-const bas2: Session = {
-  id: 'bas-2',
-  kind: 'muscu',
-  title: 'Bas du corps 2 et rotation',
-  minutes: 45,
-  anim: 'rotation',
-  intro: 'Séance plus légère pour les jambes, la veille de la sortie longue. L’accent est sur la rotation.',
-  blocks: [
-    {
-      title: 'Rotation pour le golf',
-      items: [
-        { ex: 'rotations-explosives', sets: 4, reps: 6, perSide: true, rest: 60 },
-        { ex: 'pallof-press', sets: 3, reps: 10, perSide: true, rest: 40 },
+// Les figures : chacune a une séance principale par semaine (l'étape plus ses points faibles)
+// et un ou deux rappels courts. Poirier lundi, pistol mercredi, L-sit jeudi.
+function muscuSessions(day: string): Record<string, Session> {
+  return {
+    'haut-1': muscu(
+      day,
+      { id: 'haut-1', title: 'Haut du corps 1', anim: 'pullupBand', intro: 'Les figures d’abord, quand tu es frais. Ensuite, garde une ou deux répétitions en réserve sur chaque série.' },
+      [
+        skillBlock('poirier', day, 'main'),
+        skillBlock('lsit', day, 'rappel'),
+        {
+          title: 'Force',
+          items: [
+            { ex: 'tractions-assistees', sets: 4, reps: 5, rest: 90 },
+            { ex: 'tractions-negatives', sets: 3, reps: 3, rest: 90, note: 'Descente en 5 secondes.' },
+            { ex: 'pompes', sets: 4, reps: 6, rest: 90 },
+            { ex: 'rowing-elastique', sets: 3, reps: 12, rest: 60 },
+          ],
+        },
+        { title: 'Abdos', items: [{ ex: 'pallof-press', sets: 3, reps: 10, perSide: true, rest: 40 }] },
       ],
-    },
-    {
-      title: 'Force',
-      items: [
-        { ex: 'squat-elastique', sets: 4, reps: 10, rest: 75 },
-        { ex: 'hip-thrust', sets: 3, reps: 10, perSide: true, rest: 60 },
-        { ex: 'sauts-lateraux', sets: 3, reps: 6, perSide: true, rest: 60 },
-        { ex: 'releves-tibia', sets: 3, reps: 15, rest: 40 },
+    ),
+    'haut-2': muscu(
+      day,
+      { id: 'haut-2', title: 'Haut du corps 2', anim: 'lsitFull', intro: 'Séance L-sit : les figures d’abord, puis la force avec une ou deux répétitions en réserve.' },
+      [
+        skillBlock('lsit', day, 'main'),
+        skillBlock('poirier', day, 'rappel'),
+        {
+          title: 'Force',
+          items: [
+            { ex: 'tractions-supination', sets: 4, reps: 5, rest: 90 },
+            { ex: 'pompes-lentes', sets: 4, reps: 5, rest: 90, note: 'Descente en 3 secondes.' },
+            { ex: 'developpe-epaules', sets: 3, reps: 10, rest: 60 },
+            { ex: 'tirage-visage', sets: 3, reps: 15, rest: 45 },
+          ],
+        },
+        { title: 'Abdos', items: [{ ex: 'gainage-lateral', sets: 3, hold: 30, perSide: true, rest: 30 }] },
       ],
-    },
-    {
-      title: 'Abdos',
-      items: [
-        { ex: 'gainage-lateral', sets: 3, hold: 30, perSide: true, rest: 30 },
-        { ex: 'hollow-body', sets: 3, hold: 20, rest: 40 },
+    ),
+    'bas-1': muscu(
+      day,
+      { id: 'bas-1', title: 'Bas du corps 1 et explosivité', anim: 'squatjump', intro: 'L’explosivité se travaille frais : chaque saut et chaque sprint à fond, avec un repos complet. Le pistol vient juste après.' },
+      [
+        {
+          title: 'Explosivité',
+          items: [
+            { ex: 'squat-jumps', sets: 4, reps: 5, rest: 75 },
+            { ex: 'bonds-longueur', sets: 4, reps: 3, rest: 75 },
+            { ex: 'sprints', sets: 6, reps: 1, rest: 90, label: '6 x 8 à 10 s', note: 'Les deux premières semaines : en côte ou à 80 %.' },
+          ],
+        },
+        skillBlock('pistol', day, 'main'),
+        {
+          title: 'Force',
+          items: [
+            { ex: 'fentes-bulgares', sets: 3, reps: 8, perSide: true, rest: 75 },
+            { ex: 'souleve-une-jambe', sets: 3, reps: 10, perSide: true, rest: 60 },
+            { ex: 'mollets', sets: 3, reps: 15, perSide: true, rest: 45 },
+          ],
+        },
+        skillBlock('poirier', day, 'rappel'),
+        { title: 'Abdos', items: [{ ex: 'planche', sets: 3, hold: 40, rest: 40 }] },
       ],
-    },
-  ],
-};
+    ),
+    'bas-2': muscu(
+      day,
+      { id: 'bas-2', title: 'Bas du corps 2 et rotation', anim: 'rotation', intro: 'Séance plus légère pour les jambes, la veille de la sortie longue. L’accent est sur la rotation.' },
+      [
+        {
+          title: 'Rotation pour le golf',
+          items: [
+            { ex: 'rotations-explosives', sets: 4, reps: 6, perSide: true, rest: 60 },
+            { ex: 'pallof-press', sets: 3, reps: 10, perSide: true, rest: 40 },
+          ],
+        },
+        skillBlock('pistol', day, 'rappel'),
+        {
+          title: 'Force',
+          items: [
+            { ex: 'squat-elastique', sets: 4, reps: 10, rest: 75 },
+            { ex: 'hip-thrust', sets: 3, reps: 10, perSide: true, rest: 60 },
+            { ex: 'releves-tibia', sets: 3, reps: 15, rest: 40 },
+          ],
+        },
+        skillBlock('lsit', day, 'rappel'),
+        { title: 'Abdos', items: [{ ex: 'gainage-lateral', sets: 3, hold: 30, perSide: true, rest: 30 }] },
+      ],
+    ),
+  };
+}
 
 const filet: Session = {
   id: 'filet',
@@ -344,10 +339,6 @@ function runSessions(day: string): Record<string, Session> {
 
 const FIXED: Record<string, Session> = {
   mobilite,
-  'haut-1': haut1,
-  'haut-2': haut2,
-  'bas-1': bas1,
-  'bas-2': bas2,
   filet,
   tractions,
 };
@@ -363,12 +354,16 @@ export const SCHEDULE: string[][] = [
   ['mobilite', 'filet'],
 ];
 
-export const MUSCU_SESSIONS: Session[] = [haut1, haut2, bas1, bas2];
+/** Séance d'un jour par identifiant, qu'elle soit fixe, de course ou de musculation. */
+function build(day: string, id: string): Session | undefined {
+  if (FIXED[id]) return FIXED[id];
+  if (id === 'fractionne' || id === 'facile' || id === 'longue') return runSessions(day)[id];
+  return muscuSessions(day)[id];
+}
 
 /** Toutes les séances prévues un jour donné, facultatives comprises. */
 export function sessionsFor(day: string): Session[] {
-  const runs = runSessions(day);
-  return SCHEDULE[weekday(day)].map((id) => FIXED[id] ?? runs[id]);
+  return SCHEDULE[weekday(day)].map((id) => build(day, id)).filter((s): s is Session => Boolean(s));
 }
 
 /** Les séances qui comptent pour la régularité. */
@@ -378,7 +373,7 @@ export function plannedFor(day: string): Session[] {
 
 /** Retrouve une séance par son identifiant, telle qu'elle était prévue ce jour-là. */
 export function findSession(day: string, id: string): Session | undefined {
-  return sessionsFor(day).find((s) => s.id === id) ?? FIXED[id] ?? runSessions(day)[id];
+  return build(day, id);
 }
 
 export const exerciseCount = (session: Session) => session.blocks.reduce((n, block) => n + block.items.length, 0);
