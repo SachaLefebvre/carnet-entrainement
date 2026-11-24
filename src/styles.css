@@ -12,7 +12,7 @@
   /* Couleurs des disciplines, validées pour rester distinctes en cas de daltonisme. */
   --course: #3987e5;
   --muscu: #d95926;
-  --filet: #199e70;
+  --vitesse: #199e70;
   --mobilite: #c98500;
   --k: var(--text);
   /* Les trois verrous d'une figure. Palette validée (bande de luminance, daltonisme, contraste). */
@@ -1931,4 +1931,325 @@ h1 {
   * {
     transition: none !important;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Programme v3 */
+
+.chip.is-accent {
+  background: color-mix(in srgb, var(--mobilite) 22%, var(--surface-2));
+  color: var(--text);
+}
+
+.with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bilan-callout,
+.warn-callout {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.bilan-callout {
+  border-left-color: var(--vitesse);
+}
+
+.warn-callout {
+  border-left-color: var(--muscu);
+}
+
+.start-panel p {
+  margin: 6px 0;
+}
+
+.start-panel .button {
+  margin-top: 12px;
+}
+
+.sleep-card .player-actions,
+.suggestion .player-actions {
+  margin-top: 12px;
+  padding: 0;
+  position: static;
+  background: none;
+}
+
+.sleep-card .button,
+.weight-card .button {
+  margin-top: 10px;
+}
+
+.inline-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.inline-form .field {
+  flex: 1;
+  margin: 0;
+}
+
+.inline-form .button {
+  width: auto;
+  margin: 0;
+}
+
+.unit {
+  color: var(--muted);
+}
+
+/* Vitesse de swing */
+.speed-panel {
+  border-color: color-mix(in srgb, var(--k) 40%, var(--line));
+}
+
+.speed-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.speed-count {
+  margin: 0;
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.speed-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.speed-dots span {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--k);
+}
+
+.speed-dots span.is-done {
+  background: var(--k);
+}
+
+/* Frise des blocs */
+.timeline-panel {
+  padding: 14px 12px 12px;
+}
+
+.timeline {
+  position: relative;
+  display: flex;
+  gap: 4px;
+}
+
+.timeline-bloc {
+  flex-basis: 0;
+  min-width: 0;
+  padding: 7px 4px 5px;
+  background: var(--surface-2);
+  border-radius: 10px;
+  border-top: 3px solid var(--line);
+  overflow: hidden;
+}
+
+.timeline-bloc.is-current {
+  border-top-color: var(--muscu);
+  background: color-mix(in srgb, var(--muscu) 14%, var(--surface-2));
+}
+
+.timeline-name {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: normal;
+}
+
+.timeline-date {
+  display: block;
+  color: var(--muted);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.timeline-marker {
+  position: absolute;
+  top: -8px;
+  width: 0;
+  height: 0;
+  margin-left: -6px;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 7px solid var(--text);
+}
+
+/* Semaine du programme */
+.days {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.day-group.is-today .day-head span:first-child {
+  color: var(--muscu);
+}
+
+.day-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0 0 6px;
+  font-weight: 700;
+}
+
+.move-wrap + .move-wrap {
+  margin-top: 8px;
+}
+
+.move-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 0 4px;
+  font-size: 0.86rem;
+}
+
+.move-sheet {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.move-sheet button,
+.load-chips button {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  font-weight: 700;
+}
+
+.move-sheet button[aria-pressed='true'],
+.load-chips button[aria-pressed='true'] {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+/* Charges dans le mode guidé */
+.load-picker {
+  margin-top: 14px;
+}
+
+.load-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.load-chips button {
+  padding: 0 12px;
+  font-size: 0.86rem;
+}
+
+.steps.compact {
+  margin: 10px 0;
+  font-size: 0.92rem;
+}
+
+/* Graphiques */
+.chart {
+  margin-top: 12px;
+}
+
+.chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart-tick {
+  fill: var(--dim);
+  font-size: 9px;
+}
+
+.chart polyline.chart-goal {
+  fill: none;
+}
+
+.spark-line.is-muted {
+  stroke: var(--dim);
+  stroke-dasharray: 3 3;
+}
+
+.sleep-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 120px;
+  margin-top: 14px;
+}
+
+.sleep-bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+}
+
+.sleep-fill {
+  width: 100%;
+  border-radius: 5px 5px 2px 2px;
+  border: 2px solid var(--course);
+  background: transparent;
+}
+
+.sleep-fill.is-on-time {
+  background: var(--course);
+}
+
+/* Bilan */
+.suggestion {
+  border-left: 3px solid var(--vitesse);
+}
+
+.suggestion.is-down {
+  border-left-color: var(--mobilite);
+}
+
+.suggestion-title {
+  margin: 0 0 4px;
+  font-weight: 700;
+}
+
+/* Remise à zéro */
+.danger-panel {
+  border-color: color-mix(in srgb, #e5484d 45%, var(--line));
+}
+
+.button.danger {
+  margin-top: 10px;
+  background: #b42328;
+  border-color: #b42328;
+  color: #fff;
+}
+
+.button.danger:disabled {
+  opacity: 0.45;
 }

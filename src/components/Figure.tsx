@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ANIMS, type Anchor, type Anim, type Pose, type Pt } from '../data/poses';
+import { ANIMS, type Anchor, type Anim, type Pose, type Prop, type Pt } from '../data/poses';
 
 // Le personnage : un squelette 2D dont les membres ont une longueur fixe.
 // Une pose ne donne que les points d'appui (bassin, épaules, mains, pieds) ;
@@ -196,7 +196,15 @@ const d = (...points: Pt[]) => points.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFi
 function anchor(s: Skeleton, a: Anchor): Pt {
   if (typeof a !== 'string') return a;
   if (a === 'sh') return s.neck;
+  if (a === 'hands') return mixPt(s.hA, s.hB, 0.5);
   return s[a];
+}
+
+/** Le ballon est tenu juste devant les mains. */
+function ballCenter(s: Skeleton, prop: Extract<Prop, { t: 'ball' }>): Pt {
+  const at = anchor(s, prop.at);
+  const r = prop.r ?? 7;
+  return [at[0], at[1] - r * 0.6];
 }
 
 interface Box {
@@ -226,6 +234,7 @@ function frameOf(anim: Anim): Box {
     for (const pt of [k.hip, k.neck, k.eA, k.eB, k.hA, k.hB, k.kA, k.kB, k.fA, k.fB, k.tA, k.tB]) grow(pt);
     grow(k.headAt, HEAD + 1);
     if (k.club) grow(k.club, 3);
+    for (const prop of anim.props ?? []) if (prop.t === 'ball') grow(ballCenter(k, prop), (prop.r ?? 7) + 2);
   }
   for (const prop of anim.props ?? []) {
     if (prop.t === 'bar') grow([prop.at[0], prop.at[1] - 8], 8);
@@ -333,9 +342,14 @@ export function Figure({ anim: animId, playing = false, className, label, frame 
       </g>
 
       {s.club && <path className="fig-club" d={d(s.hA, s.club)} />}
-      {anim.props?.map((prop, i) =>
-        prop.t === 'band' ? <path key={i} className="fig-band" d={d(anchor(s, prop.from), anchor(s, prop.to))} /> : null,
-      )}
+      {anim.props?.map((prop, i) => {
+        if (prop.t === 'band') return <path key={i} className="fig-band" d={d(anchor(s, prop.from), anchor(s, prop.to))} />;
+        if (prop.t === 'ball') {
+          const c = ballCenter(s, prop);
+          return <circle key={i} className="fig-ball" cx={c[0]} cy={c[1]} r={prop.r ?? 7} />;
+        }
+        return null;
+      })}
     </svg>
   );
 }

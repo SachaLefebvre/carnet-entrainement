@@ -79,3 +79,9 @@
   stroke: var(--fig-accent, #199e70);
   stroke-width: 3;
 }
+
+.fig-ball {
+  fill: var(--fig-accent, #d95926);
+  stroke: var(--fig-bg, #14191e);
+  stroke-width: 1.5;
+}

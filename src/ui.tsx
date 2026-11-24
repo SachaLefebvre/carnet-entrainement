@@ -1,5 +1,5 @@
 // Éléments d'interface partagés entre les écrans.
-import type { CSSProperties, ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { Figure } from './components/Figure';
 import { exerciseCount, KIND_LABEL, type Kind, type Session } from './data/programme';
 import { back, href } from './lib/router';
@@ -25,6 +25,11 @@ const ICONS = {
   plus: 'M12 5v14M5 12h14',
   minus: 'M5 12h14',
   skip: 'M6 5l9 7-9 7zM18 5v14',
+  moon: 'M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z',
+  scale: 'M5 4h14l1 16H4zM9 9a3 3 0 0 1 6 0M12 9l1.5-2',
+  golf: 'M7 21h10M12 21V4l7 3.5L12 11',
+  move: 'M7 7h13M17 4l3 3-3 3M17 17H4M7 14l-3 3 3 3',
+  bolt: 'M13 3L5 14h6l-1 7 8-11h-6z',
 };
 
 export function Icon({ name, size = 22 }: { name: keyof typeof ICONS; size?: number }) {
@@ -102,7 +107,6 @@ export function SessionCard({ day, session, entry, resume }: { day: string; sess
       <div className="session-text">
         <span className="session-kind">
           {KIND_LABEL[session.kind]}
-          {session.optional ? ', facultatif' : ''}
         </span>
         <span className="session-title">{session.title}</span>
         <span className="session-meta">
@@ -122,6 +126,86 @@ export function SessionCard({ day, session, entry, resume }: { day: string; sess
         )}
       </div>
     </a>
+  );
+}
+
+export interface ChartPoint {
+  day: string;
+  value: number;
+}
+
+/**
+ * Courbe d'évolution : une ou deux séries, et une ligne d'objectif facultative.
+ * La valeur du point choisi est toujours écrite sous le graphique.
+ */
+export function Chart({
+  series,
+  goal,
+  format,
+  label,
+  dates,
+}: {
+  series: { name: string; points: ChartPoint[]; muted?: boolean }[];
+  goal?: ChartPoint[];
+  format: (v: number) => string;
+  label: string;
+  dates: (day: string) => string;
+}) {
+  const main = series[0].points;
+  const [index, setIndex] = useState(main.length - 1);
+  const all = [...series.flatMap((s) => s.points), ...(goal ?? [])];
+  if (main.length === 0) return null;
+  const days = [...new Set(all.map((p) => p.day))].sort();
+  const first = days[0];
+  const last = days[days.length - 1];
+  const span = Math.max(1, (Date.parse(last) - Date.parse(first)) / 86_400_000);
+  const values = all.map((p) => p.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const pad = (max - min) * 0.12 || 1;
+  const lo = min - pad;
+  const hi = max + pad;
+  const W = 320;
+  const H = 120;
+  const x = (day: string) => 14 + ((Date.parse(day) - Date.parse(first)) / 86_400_000 / span) * (W - 28);
+  const y = (v: number) => H - 14 - ((v - lo) / (hi - lo)) * (H - 28);
+  const active = Math.min(index, main.length - 1);
+  const line = (points: ChartPoint[]) => points.map((p) => `${x(p.day).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
+  return (
+    <div className="chart">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label}>
+        <text className="chart-tick" x={4} y={12}>
+          {format(max)}
+        </text>
+        <text className="chart-tick" x={4} y={H - 2}>
+          {format(min)}
+        </text>
+        {goal && goal.length > 1 && <polyline className="chart-goal" points={line(goal)} />}
+        {series
+          .slice()
+          .reverse()
+          .map((s) => (
+            <polyline key={s.name} className={`spark-line${s.muted ? ' is-muted' : ''}`} points={line(s.points)} />
+          ))}
+        {main.map((p, i) => (
+          <g key={p.day}>
+            <circle className={`spark-dot${i === active ? ' is-active' : ''}`} cx={x(p.day)} cy={y(p.value)} r={i === active ? 5.5 : 3.5} />
+            <rect className="spark-hit" x={x(p.day) - 12} y={0} width={24} height={H} onMouseEnter={() => setIndex(i)} onClick={() => setIndex(i)} aria-label={`${dates(p.day)} : ${format(p.value)}`} />
+          </g>
+        ))}
+      </svg>
+      <p className="readout" aria-live="polite">
+        {dates(main[active].day)} : <strong className="num">{format(main[active].value)}</strong>
+        {series.slice(1).map((s) => {
+          const match = s.points.find((p) => p.day === main[active].day);
+          return match ? (
+            <span key={s.name}>
+              , {s.name} <span className="num">{format(match.value)}</span>
+            </span>
+          ) : null;
+        })}
+      </p>
+    </div>
   );
 }
 

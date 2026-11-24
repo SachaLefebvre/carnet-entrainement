@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Figure } from '../components/Figure';
-import { KINDS, KIND_LABEL, TESTS, type TestDef } from '../data/programme';
+import { KINDS, KIND_LABEL, PROGRAM_START, SEASON_START, TESTS, type TestDef } from '../data/programme';
 import { addDays, capitalize, dayAndMonth, mondayOf, shortDate, todayKey, WEEKDAY_INITIALS, weekdayName, weekRange } from '../lib/dates';
-import { href, replace } from '../lib/router';
+import { speedUnit } from '../lib/prefs';
+import { go, href, replace } from '../lib/router';
 import {
   bestOf,
   dayCount,
@@ -10,33 +11,49 @@ import {
   daysSinceStart,
   firstDay,
   formatClock,
+  formatHours,
+  formatKg,
   formatKm,
   formatMinutes,
   formatTest,
+  gap,
   journal,
-  parseClock,
+  nights,
+  parseTest,
   percent,
   runs,
+  sleepSummary,
+  BED_TARGET,
+  WAKE_TARGET,
   streaks,
   summarize,
+  swingAvg,
+  swingMax,
   tally,
+  TEST_INPUT,
   testHistory,
   testKey,
   totals,
   weeklySeries,
   weekReport,
+  WEIGHT_GOAL,
+  WEIGHT_ID,
+  WEIGHT_START,
+  weights,
   type TestResult,
 } from '../lib/stats';
 import { updateEntry, useStore, type Entries } from '../lib/store';
-import { kindStyle, Segmented } from '../ui';
+import { Chart, Icon, kindStyle, Segmented } from '../ui';
 
-type Tab = 'vue' | 'journal' | 'records';
+type Tab = 'vue' | 'tests' | 'corps' | 'golf' | 'journal';
 type Period = '7' | '28' | 'all';
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'vue', label: 'Vue d’ensemble' },
+  { id: 'vue', label: 'Vue' },
+  { id: 'tests', label: 'Tests' },
+  { id: 'corps', label: 'Corps' },
+  { id: 'golf', label: 'Swing' },
   { id: 'journal', label: 'Journal' },
-  { id: 'records', label: 'Records' },
 ];
 
 const PERIODS: { id: Period; label: string }[] = [
@@ -44,6 +61,8 @@ const PERIODS: { id: Period; label: string }[] = [
   { id: '28', label: '4 semaines' },
   { id: 'all', label: 'Tout' },
 ];
+
+const dateLabel = (day: string) => shortDate(day);
 
 export function Stats({ tab: routeTab }: { tab?: string }) {
   const { entries } = useStore();
@@ -54,13 +73,15 @@ export function Stats({ tab: routeTab }: { tab?: string }) {
       <header className="page-head">
         <div>
           <p className="overline">Jour {daysSinceStart(entries)} du suivi</p>
-          <h1>Statistiques</h1>
+          <h1>Progrès</h1>
         </div>
       </header>
-      <Segmented options={TABS} value={tab} onChange={(next) => replace('stats', next)} label="Rubrique" />
+      <Segmented options={TABS} value={tab} onChange={(next) => replace('progres', next)} label="Rubrique" />
       {tab === 'vue' && <Overview entries={entries} />}
+      {tab === 'tests' && <Tests entries={entries} />}
+      {tab === 'corps' && <Body entries={entries} />}
+      {tab === 'golf' && <Swing entries={entries} />}
       {tab === 'journal' && <Journal entries={entries} />}
-      {tab === 'records' && <Records entries={entries} />}
     </main>
   );
 }
@@ -102,11 +123,7 @@ function Overview({ entries }: { entries: Entries }) {
 
       <section className="panel">
         <p className="big-number num">{pct === null ? '–' : `${pct} %`}</p>
-        <p className="muted">
-          {t.total.planned > 0
-            ? `de régularité : ${t.total.done} séances faites sur ${t.total.planned} prévues`
-            : 'Valide ta première séance pour démarrer le suivi.'}
-        </p>
+        <p className="muted">{t.total.planned > 0 ? `de régularité : ${t.total.done} séances faites sur ${t.total.planned} prévues` : 'Valide ta première séance pour démarrer le suivi.'}</p>
         <dl className="facts">
           <div>
             <dt>Série en cours</dt>
@@ -144,7 +161,7 @@ function Overview({ entries }: { entries: Entries }) {
 
       <h2 className="section-title">Par discipline</h2>
       <ul className="panel kind-bars is-large">
-        {KINDS.map((kind) => {
+        {KINDS.filter((k) => k !== 'vitesse').map((kind) => {
           const c = t.byKind[kind];
           const p = percent(c);
           return (
@@ -231,18 +248,9 @@ function Overview({ entries }: { entries: Entries }) {
             {heatCount.done} sur {heatCount.planned}
           </strong>
           .{' '}
-          <a className="text-link" href={href('planning', heatDay)}>
+          <a className="text-link" href={href('programme', heatDay)}>
             Ouvrir ce jour
           </a>
-        </p>
-        <p className="heat-legend" aria-hidden="true">
-          Rien
-          <span className="heat-cell level-0" />
-          <span className="heat-cell level-1" />
-          <span className="heat-cell level-2" />
-          <span className="heat-cell level-3" />
-          <span className="heat-cell level-4" />
-          Tout
         </p>
       </section>
 
@@ -264,57 +272,28 @@ function Overview({ entries }: { entries: Entries }) {
         </>
       )}
 
-      <h2 className="section-title">Bilan de la semaine</h2>
+      <h2 className="section-title">Bilan en texte</h2>
       <section className="panel">
-        <p className="muted">Copie le résumé détaillé de la semaine en cours pour le coller dans une conversation avec Claude et obtenir une analyse.</p>
+        <p className="muted">Copie le résumé détaillé de la semaine pour le coller dans une conversation avec Claude.</p>
         <button type="button" className="button" onClick={copyReport}>
           {copied ? 'Bilan copié' : 'Copier le bilan de la semaine'}
         </button>
+        <a className="button ghost" href={href('bilan', mondayOf(today))}>
+          Ouvrir le bilan de la semaine
+        </a>
       </section>
     </>
   );
 }
 
-function Journal({ entries }: { entries: Entries }) {
-  const done = journal(entries);
-  if (done.length === 0) {
-    return <p className="muted empty">Aucune séance validée pour l’instant. Elles s’afficheront ici, de la plus récente à la plus ancienne.</p>;
-  }
-  const days = [...new Set(done.map((d) => d.day))];
-  return (
-    <>
-      {days.map((day) => (
-        <section key={day}>
-          <h2 className="section-title">
-            {capitalize(weekdayName(day))} {dayAndMonth(day)}
-          </h2>
-          <div className="stack tight">
-            {done
-              .filter((d) => d.day === day)
-              .map(({ session, entry }) => {
-                const summary = summarize(session, entry);
-                return (
-                  <a key={session.id} className="journal-row" href={href('seance', day, session.id)} style={kindStyle(session.kind)}>
-                    <span className="kind-dot" />
-                    <span className="journal-text">
-                      <span className="journal-title">{session.title}</span>
-                      <span className="journal-meta">{summary || KIND_LABEL[session.kind]}</span>
-                      {entry.note && summary !== entry.note && <span className="journal-note">{entry.note}</span>}
-                    </span>
-                  </a>
-                );
-              })}
-          </div>
-        </section>
-      ))}
-    </>
-  );
-}
+// ---------------------------------------------------------------------------
+// Tests
 
-function Records({ entries }: { entries: Entries }) {
+function Tests({ entries }: { entries: Entries }) {
   return (
     <>
-      <p className="lead">Refais ces tests toutes les quatre semaines, frais, pour mesurer tes progrès. Les semaines allégées sont faites pour ça.</p>
+      <p className="lead">Les tests reviennent toutes les quatre semaines, en semaine allégée. Tu peux aussi noter un résultat à la main, à n’importe quelle date.</p>
+      <p className="hint">Repère TPI : les lancers rotatif et poitrine sont plus liés à la vitesse de club que la détente.</p>
       <div className="stack">
         {TESTS.map((test) => (
           <TestCard key={test.id} test={test} results={testHistory(entries, test.id)} />
@@ -327,15 +306,16 @@ function Records({ entries }: { entries: Entries }) {
 function TestCard({ test, results }: { test: TestDef; results: TestResult[] }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
+  const [day, setDay] = useState(todayKey());
   const best = bestOf(test, results);
   const last = results[results.length - 1];
   const first = results[0];
-  const parsed = test.unit === 'time' ? parseClock(text) : text.trim() === '' ? null : Number(text.replace(',', '.'));
-  const valid = parsed !== null && Number.isFinite(parsed) && parsed > 0;
+  const parsed = parseTest(test, text);
+  const input = TEST_INPUT[test.unit];
 
   const save = () => {
-    if (!valid || parsed === null) return;
-    updateEntry(todayKey(), testKey(test.id), { data: { value: Math.round(parsed) } });
+    if (parsed === null || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
+    updateEntry(day, testKey(test.id), { done: true, data: { value: parsed } });
     setText('');
     setOpen(false);
   };
@@ -371,30 +351,30 @@ function TestCard({ test, results }: { test: TestDef; results: TestResult[] }) {
               <dd className="num">{formatTest(test, last.value)}</dd>
             </div>
           </dl>
-          {results.length > 1 && <Spark key={results.length} test={test} results={results} />}
+          {results.length > 1 && <Chart key={results.length} series={[{ name: test.name, points: results }]} format={(v) => formatTest(test, v)} label={`Évolution : ${test.name}`} dates={dateLabel} />}
           {trend && <p className="muted small">{trend}</p>}
         </>
       ) : (
-        <p className="muted test-empty">Pas encore de résultat. Fais le test et note ton score.</p>
+        <p className="muted test-empty">Pas encore de résultat.</p>
       )}
 
       {open ? (
         <div className="test-form">
-          <label className="field">
-            <span>{test.unit === 'time' ? 'Temps (min:s)' : test.unit === 'seconds' ? 'Secondes tenues' : 'Répétitions'}</span>
-            <input
-              inputMode={test.unit === 'time' ? 'text' : 'numeric'}
-              placeholder={test.unit === 'time' ? '27:30' : test.unit === 'seconds' ? '20' : '3'}
-              value={text}
-              autoFocus
-              onChange={(e) => setText(e.target.value)}
-            />
-          </label>
+          <div className="field-row">
+            <label className="field">
+              <span>{input.label}</span>
+              <input inputMode={input.mode} placeholder={input.placeholder} value={text} autoFocus onChange={(e) => setText(e.target.value)} />
+            </label>
+            <label className="field">
+              <span>Date</span>
+              <input type="date" value={day} max={todayKey()} onChange={(e) => setDay(e.target.value)} />
+            </label>
+          </div>
           <div className="player-actions is-row">
             <button type="button" className="button ghost" onClick={() => setOpen(false)}>
               Annuler
             </button>
-            <button type="button" className="button primary" disabled={!valid} onClick={save}>
+            <button type="button" className="button primary" disabled={parsed === null} onClick={save}>
               Enregistrer
             </button>
           </div>
@@ -408,42 +388,194 @@ function TestCard({ test, results }: { test: TestDef; results: TestResult[] }) {
   );
 }
 
-/** Courbe d'évolution d'un test. Les valeurs exactes sont dans la liste juste en dessous. */
-function Spark({ test, results }: { test: TestDef; results: TestResult[] }) {
-  const [index, setIndex] = useState(results.length - 1);
-  const shown = results.slice(-10);
-  const active = Math.min(index, shown.length - 1);
-  const values = shown.map((r) => r.value);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
-  const W = 300;
-  const H = 80;
-  const x = (i: number) => 12 + (i * (W - 24)) / Math.max(shown.length - 1, 1);
-  const y = (v: number) => H - 12 - ((v - min) / span) * (H - 24);
+// ---------------------------------------------------------------------------
+// Corps : poids et sommeil
+
+function Body({ entries }: { entries: Entries }) {
+  const today = todayKey();
+  const list = weights(entries);
+  const last = list[list.length - 1];
+  const [text, setText] = useState('');
+  const [day, setDay] = useState(today);
+  const value = Number(text.replace(',', '.'));
+  const valid = text.trim() !== '' && Number.isFinite(value) && value > 30 && value < 200;
+  const goal = [
+    { day: PROGRAM_START, value: WEIGHT_START },
+    { day: SEASON_START, value: WEIGHT_GOAL },
+  ];
+  const recent = list.filter((p) => p.day >= addDays(today, -14));
+  const perWeek = recent.length >= 2 ? ((recent[recent.length - 1].value - recent[0].value) / Math.max(1, (Date.parse(recent[recent.length - 1].day) - Date.parse(recent[0].day)) / 86_400_000)) * 7 : null;
+
+  const sleep7 = sleepSummary(entries, addDays(today, -6), today);
+  const sleep28 = sleepSummary(entries, addDays(today, -27), today);
+  const last14 = nights(entries).filter((n) => n.day > addDays(today, -14));
+
   return (
-    <div className="spark">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Évolution du test ${test.name}`}>
-        <polyline className="spark-line" points={shown.map((r, i) => `${x(i)},${y(r.value)}`).join(' ')} />
-        {shown.map((r, i) => (
-          <g key={r.day}>
-            <circle className={`spark-dot${i === active ? ' is-active' : ''}`} cx={x(i)} cy={y(r.value)} r={i === active ? 6 : 4.5} />
-            <rect
-              className="spark-hit"
-              x={x(i) - 15}
-              y={0}
-              width={30}
-              height={H}
-              onMouseEnter={() => setIndex(i)}
-              onClick={() => setIndex(i)}
-              aria-label={`${shortDate(r.day)} : ${formatTest(test, r.value)}`}
-            />
-          </g>
-        ))}
-      </svg>
-      <p className="readout" aria-live="polite">
-        {shortDate(shown[active].day)} : <strong className="num">{formatTest(test, shown[active].value)}</strong>
-      </p>
-    </div>
+    <>
+      <h2 className="section-title">Poids</h2>
+      <section className="panel">
+        <dl className="facts">
+          <div>
+            <dt>Actuel</dt>
+            <dd className="num">{last ? formatKg(last.value) : '–'}</dd>
+          </div>
+          <div>
+            <dt>Objectif en mars</dt>
+            <dd className="num">{formatKg(WEIGHT_GOAL)}</dd>
+          </div>
+          <div>
+            <dt>Rythme récent</dt>
+            <dd className="num">{perWeek === null ? '–' : `${perWeek >= 0 ? '+' : ''}${perWeek.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} kg/sem`}</dd>
+          </div>
+        </dl>
+        {list.length > 0 ? (
+          <Chart series={[{ name: 'Poids', points: list }]} goal={goal} format={formatKg} label="Évolution du poids, avec la trajectoire visée vers 70 kg" dates={dateLabel} />
+        ) : (
+          <p className="muted">Pas encore de pesée. Une par semaine suffit, le lundi matin à jeun.</p>
+        )}
+        <p className="muted small">
+          {perWeek === null
+            ? 'La ligne pointillée est la trajectoire visée : environ 300 g par semaine.'
+            : perWeek < 0.15
+              ? 'Tu prends moins de 150 g par semaine : ajoute une collation ou un peu plus de féculents.'
+              : perWeek > 0.6
+                ? 'Tu prends plus de 600 g par semaine : c’est un peu rapide, réduis légèrement les portions.'
+                : 'Le rythme est bon, continue comme ça.'}
+        </p>
+        <div className="field-row">
+          <label className="field">
+            <span>Poids (kg)</span>
+            <input inputMode="decimal" placeholder="66,4" value={text} onChange={(e) => setText(e.target.value)} />
+          </label>
+          <label className="field">
+            <span>Date</span>
+            <input type="date" value={day} max={today} onChange={(e) => setDay(e.target.value)} />
+          </label>
+        </div>
+        <button
+          type="button"
+          className="button"
+          disabled={!valid}
+          onClick={() => {
+            updateEntry(day, WEIGHT_ID, { done: true, data: { value: Math.round(value * 10) / 10 } });
+            setText('');
+          }}
+        >
+          Ajouter une pesée
+        </button>
+      </section>
+
+      <h2 className="section-title">Sommeil</h2>
+      <section className="panel">
+        <dl className="facts">
+          <div>
+            <dt>Moyenne sur 7 jours</dt>
+            <dd className="num">{sleep7.count ? formatHours(sleep7.average) : '–'}</dd>
+          </div>
+          <div>
+            <dt>Nuits à l’heure, 4 semaines</dt>
+            <dd className="num">{sleep28.count ? `${sleep28.onTime} sur ${sleep28.count}` : '–'}</dd>
+          </div>
+        </dl>
+        {last14.length > 0 ? (
+          <div className="sleep-bars" role="group" aria-label="Durée des 14 dernières nuits">
+            {last14.map((n) => {
+              const onTime = gap(n.bed, BED_TARGET) <= 30 && gap(n.wake, WAKE_TARGET) <= 30;
+              return (
+                <div key={n.day} className="sleep-bar" title={`${shortDate(n.day)} : ${formatHours(n.minutes)}, couché à ${n.bed}, levé à ${n.wake}`}>
+                  <span className={`sleep-fill${onTime ? ' is-on-time' : ''}`} style={{ height: `${Math.min(100, (n.minutes / 600) * 100)}%` }} />
+                  <span className="week-tick num">{shortDate(n.day).split(' ')[0]}</span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="muted">Ta nuit se note chaque matin depuis l’écran Aujourd’hui.</p>
+        )}
+        <p className="muted small">Objectif : coucher à minuit, lever à 8 h, 8 h de sommeil. Les barres pleines sont les nuits à moins de 30 minutes des horaires visés.</p>
+      </section>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Vitesse de swing
+
+function Swing({ entries }: { entries: Entries }) {
+  const unit = speedUnit();
+  const max = swingMax(entries);
+  const avg = swingAvg(entries);
+  const best = max.reduce<{ day: string; value: number } | undefined>((b, p) => (!b || p.value > b.value ? p : b), undefined);
+  const last = max[max.length - 1];
+  const first = max[0];
+  const fmt = (v: number) => `${Math.round(v)} ${unit}`;
+  return (
+    <>
+      <section className="panel" style={kindStyle('vitesse')}>
+        <dl className="facts">
+          <div>
+            <dt>Record au driver</dt>
+            <dd className="num">{best ? fmt(best.value) : '–'}</dd>
+          </div>
+          <div>
+            <dt>Dernière séance</dt>
+            <dd className="num">{last ? fmt(last.value) : '–'}</dd>
+          </div>
+          <div>
+            <dt>Depuis le début</dt>
+            <dd className="num">{first && last && max.length > 1 ? `${last.value - first.value >= 0 ? '+' : ''}${Math.round(last.value - first.value)} ${unit}` : '–'}</dd>
+          </div>
+        </dl>
+        {max.length > 0 ? (
+          <Chart series={[{ name: 'Max', points: max }, { name: 'moyenne', points: avg, muted: true }]} format={fmt} label="Vitesse de club au driver, maximale et moyenne" dates={dateLabel} />
+        ) : (
+          <p className="muted">Pas encore de séance. Lance une séance de vitesse au practice et note ta vitesse au R10.</p>
+        )}
+        <button type="button" className="button" onClick={() => go('seance', todayKey(), 'vitesse')}>
+          <Icon name="golf" size={20} />
+          Je suis au practice
+        </button>
+      </section>
+      <p className="hint">Si ta puissance (lancers, détente) progresse et pas ta vitesse de club, la limite est plutôt technique. L’inverse indique une limite physique.</p>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Journal
+
+function Journal({ entries }: { entries: Entries }) {
+  const done = journal(entries);
+  if (done.length === 0) {
+    return <p className="muted empty">Aucune séance validée pour l’instant. Elles s’afficheront ici, de la plus récente à la plus ancienne.</p>;
+  }
+  const days = [...new Set(done.map((d) => d.day))];
+  return (
+    <>
+      {days.map((day) => (
+        <section key={day}>
+          <h2 className="section-title">
+            {capitalize(weekdayName(day))} {dayAndMonth(day)}
+          </h2>
+          <div className="stack tight">
+            {done
+              .filter((d) => d.day === day)
+              .map(({ session, entry }) => {
+                const summary = summarize(session, entry);
+                return (
+                  <a key={session.id} className="journal-row" href={href('seance', day, session.id)} style={kindStyle(session.kind)}>
+                    <span className="kind-dot" />
+                    <span className="journal-text">
+                      <span className="journal-title">{session.title}</span>
+                      <span className="journal-meta">{summary || KIND_LABEL[session.kind]}</span>
+                      {entry.note && summary !== entry.note && <span className="journal-note">{entry.note}</span>}
+                    </span>
+                  </a>
+                );
+              })}
+          </div>
+        </section>
+      ))}
+    </>
   );
 }

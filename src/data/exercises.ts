@@ -1,18 +1,23 @@
 // La bibliothèque d'exercices : consignes, erreurs à éviter, variantes et animation associée.
 
-export type Category = 'mobilite' | 'haut' | 'bas' | 'explosivite' | 'gainage' | 'figures' | 'course';
+export type Category = 'mobilite' | 'echauffement' | 'explosivite' | 'lancers' | 'haut' | 'bas' | 'gainage' | 'figures' | 'course' | 'golf' | 'tests';
 
 export const CATEGORY_LABEL: Record<Category, string> = {
   mobilite: 'Mobilité',
+  echauffement: 'Échauffement et tibias',
+  explosivite: 'Pliométrie et sprints',
+  lancers: 'Lancers',
   haut: 'Haut du corps',
   bas: 'Bas du corps',
-  explosivite: 'Explosivité',
-  gainage: 'Abdos et gainage',
+  gainage: 'Gainage et dos',
   figures: 'Figures',
   course: 'Course',
+  golf: 'Vitesse de swing',
+  tests: 'Tests',
 };
 
-export const CATEGORIES = Object.keys(CATEGORY_LABEL) as Category[];
+/** Les tests ne sont pas des exercices de la bibliothèque. */
+export const CATEGORIES = (Object.keys(CATEGORY_LABEL) as Category[]).filter((c) => c !== 'tests');
 
 export interface Exercise {
   id: string;
@@ -894,7 +899,346 @@ const list: Exercise[] = [
     ],
     avoid: 'Finir crispé.',
   },
+  ...more(),
 ];
 
 export const EXERCISES: Record<string, Exercise> = Object.fromEntries(list.map((e) => [e.id, e]));
-export const EXERCISE_LIST = list;
+/** La bibliothèque affichée : sans les fiches de test. */
+export const EXERCISE_LIST = list.filter((e) => e.cat !== 'tests');
+
+type Def = [id: string, name: string, cat: Category, anim: string, muscles: string, steps: string[], avoid: string, easier?: string, harder?: string];
+
+function more(): Exercise[] {
+  const defs: Def[] = [
+    // Mobilité du matin
+    ['cou-rotations', 'Mobilité du cou', 'mobilite', 'neckTilt', 'Cou, haut du dos', [
+      'Debout, épaules basses, tourne lentement la tête d’un côté puis de l’autre, le plus loin possible sans forcer.',
+      'Penche ensuite l’oreille vers l’épaule, de chaque côté.',
+      'Au golf, la tête reste stable pendant que les épaules tournent : le cou doit avoir de la marge.',
+    ], 'Hausser les épaules pour tourner plus loin.'],
+    ['epaules-cercles', 'Grands cercles d’épaule', 'mobilite', 'shoulderCircle', 'Épaules', [
+      'Bras tendu, dessine le plus grand cercle possible, lentement.',
+      'Le reste du corps ne bouge pas : seul le bras tourne.',
+      'Fais les cercles vers l’avant puis vers l’arrière.',
+    ], 'Cambrer le dos quand le bras passe derrière.'],
+    ['etirement-dorsaux', 'Étirement des dorsaux', 'mobilite', 'shoulderOpen', 'Grand dorsal, épaules', [
+      'Coudes posés sur une chaise ou sur la barre, recule les fesses vers les talons.',
+      'Laisse la poitrine descendre vers le sol, sans creuser le bas du dos.',
+      'Respire lentement : l’étirement augmente à chaque expiration.',
+    ], 'Cambrer le bas du dos au lieu d’ouvrir les épaules.'],
+    ['poignets-cercles', 'Cercles de poignets', 'mobilite', 'wristCircles', 'Poignets, avant-bras', [
+      'Bras devant toi, poings fermés, fais de grands cercles avec les poignets.',
+      'Dix dans un sens, dix dans l’autre.',
+      'C’est l’échauffement de base avant de taper des balles.',
+    ], 'Faire des petits cercles rapides : cherche l’amplitude.'],
+    ['poignets-appui', 'Bascules sur les poignets', 'mobilite', 'wristRock', 'Poignets, avant-bras', [
+      'À quatre pattes, mains à plat sous les épaules, doigts vers l’avant.',
+      'Bascule doucement les épaules au-delà des mains, puis reviens.',
+      'Fais ensuite une série doigts tournés vers les genoux, plus légère.',
+    ], 'Aller jusqu’à la douleur : c’est une mobilisation, pas un étirement fort.'],
+    ['poignets-armement', 'Armement des poignets avec un club', 'mobilite', 'wristHinge', 'Poignets, avant-bras', [
+      'Tiens un club devant toi, bras détendus, comme à l’adresse.',
+      'Arme les poignets pour monter la tête du club, puis laisse-la redescendre.',
+      'C’est le mouvement de la cassure du swing : il doit être libre et ample.',
+    ], 'Plier les coudes pour monter le club.'],
+    ['avant-bras-rotation', 'Rotation des avant-bras avec un club', 'mobilite', 'forearmRot', 'Avant-bras, poignets', [
+      'Club tenu à la verticale devant toi, coudes au corps.',
+      'Fais pivoter les avant-bras pour incliner le club à gauche, puis à droite.',
+      'Le mouvement vient des avant-bras, pas des épaules.',
+    ], 'Écarter les coudes pour aller plus loin.'],
+    ['rotation-genou-club', 'Rotation à genoux avec un club', 'mobilite', 'kneelRot', 'Haut du dos, rotation du buste', [
+      'À genoux, bassin serré, club posé sur le haut de la poitrine, bras croisés dessus.',
+      'Tourne le buste d’un côté le plus loin possible, sans bouger le bassin, puis de l’autre.',
+      'C’est la rotation de ta montée de swing, sans compensation des hanches.',
+    ], 'Laisser le bassin tourner avec le buste.'],
+    ['rotation-interne-hanche', 'Rotation interne de hanche active', 'mobilite', 'hipIR', 'Hanches', [
+      'Assis en 90/90, buste droit, mains au sol.',
+      'Décolle le pied de la jambe arrière du sol, sans pencher le buste. Tiens 2 secondes.',
+      'La rotation interne de la hanche avant est la qualité qui manque le plus aux golfeurs.',
+    ], 'Pencher le buste pour décoller le pied.'],
+    ['adducteurs-balances', 'Balancés en quadrupédie', 'mobilite', 'quadRock', 'Adducteurs, hanches', [
+      'À quatre pattes, tends une jambe sur le côté, pied à plat.',
+      'Recule les fesses vers le talon, puis reviens, dos plat.',
+      'Tu dois sentir l’étirement à l’intérieur de la cuisse tendue.',
+    ], 'Arrondir le dos en reculant.'],
+    ['chevilles-cercles', 'Cercles de chevilles', 'mobilite', 'ankleCircles', 'Chevilles', [
+      'Debout sur une jambe, l’autre pied levé, dessine de grands cercles avec le pied.',
+      'Dix dans un sens, dix dans l’autre, puis change de pied.',
+      'Tiens un mur si l’équilibre te gêne.',
+    ], 'Bouger toute la jambe au lieu de la cheville.'],
+
+    // Échauffement et tibias
+    ['corde-a-sauter', 'Corde à sauter', 'echauffement', 'jumpRope', 'Mollets, chevilles, cardio', [
+      'Petits sauts sur l’avant des pieds, genoux souples, talons qui ne touchent pas le sol.',
+      'Les poignets font tourner la corde, les bras restent près du corps.',
+      'Reste détendu : c’est un échauffement, pas un effort.',
+    ], 'Sauter haut. Quelques centimètres suffisent.', 'Sans corde, sautille sur place.', 'Alterne pieds joints et pas de course.'],
+    ['mollets-genou-flechi', 'Mollets genou fléchi', 'echauffement', 'calfBent', 'Soléaire', [
+      'Sur une marche, genou fléchi d’environ 30 degrés, monte sur la pointe du pied.',
+      'Garde le genou plié du début à la fin : c’est ce qui fait travailler le soléaire.',
+      'Descends lentement sous le niveau de la marche.',
+    ], 'Tendre le genou en montant.', 'Sur les deux pieds.', 'Avec un sac lesté.'],
+    ['mollets-excentriques', 'Mollets excentriques', 'echauffement', 'calfEcc', 'Mollets, tendon d’Achille', [
+      'Monte sur la pointe avec les deux pieds sur une marche.',
+      'Retire un pied et redescends sur une seule jambe, en 3 à 4 secondes.',
+      'La descente lente renforce le mollet et le tendon : c’est la meilleure protection pour courir.',
+    ], 'Se laisser tomber à la fin de la descente.'],
+    ['tibial-posterieur', 'Tibial postérieur à l’élastique', 'echauffement', 'tibPost', 'Tibial postérieur, voûte plantaire', [
+      'Assis, élastique autour de l’avant du pied, tiré vers l’extérieur.',
+      'Tourne la plante du pied vers l’intérieur contre l’élastique, puis reviens lentement.',
+      'Ce muscle soutient la voûte et encaisse les impacts : il est souvent en cause dans la périostite.',
+    ], 'Bouger la jambe au lieu de la cheville.'],
+    ['pied-court', 'Pied court', 'echauffement', 'shortFoot', 'Muscles du pied, voûte plantaire', [
+      'Debout pieds nus, rapproche la base du gros orteil du talon sans plier les orteils.',
+      'La voûte se creuse. Tiens la position en respirant.',
+      'Ça paraît minuscule, mais c’est la base d’un pied qui absorbe bien les chocs.',
+    ], 'Recroqueviller les orteils.'],
+    ['abduction-couchee', 'Abduction de hanche couché', 'echauffement', 'sideAbd', 'Moyen fessier', [
+      'Couché sur le côté, jambes tendues, bassin bien empilé.',
+      'Monte la jambe du dessus, talon légèrement en arrière, sans tourner le pied vers le plafond.',
+      'Si la hanche lâche, ce sont les tibias qui encaissent : ce muscle protège toute la jambe.',
+    ], 'Basculer le bassin vers l’arrière pour monter plus haut.', undefined, 'Avec un élastique autour des genoux.'],
+    ['balances-jambes', 'Balancés de jambe', 'echauffement', 'legSwing', 'Hanches, ischios', [
+      'Une main au mur, balance la jambe d’avant en arrière, de plus en plus ample.',
+      'Le buste reste droit.',
+      'Fais ensuite des balancés de côté, devant toi.',
+    ], 'Forcer l’amplitude dès les premiers balancés.'],
+    ['fentes-marchees', 'Fentes marchées', 'echauffement', 'walkLunge', 'Quadriceps, fessiers, hanches', [
+      'Grand pas en avant, descends jusqu’à frôler le sol avec le genou arrière.',
+      'Pousse sur le pied avant pour enchaîner sur l’autre jambe.',
+      'Buste droit, genou avant dans l’axe du pied.',
+    ], 'Laisser le genou avant rentrer vers l’intérieur.'],
+    ['montees-genoux', 'Montées de genoux', 'echauffement', 'highKnees', 'Fléchisseurs de hanche, mollets', [
+      'Sur place, monte les genoux à hauteur de hanche, sur l’avant des pieds.',
+      'Les bras accompagnent comme en sprint.',
+      'Rythme rapide mais contrôlé.',
+    ], 'Se pencher en arrière.'],
+    ['tractions-omoplates', 'Tractions des omoplates', 'echauffement', 'scapPull', 'Bas des trapèzes, dorsaux', [
+      'Suspendu à la barre, bras tendus.',
+      'Sans plier les coudes, tire les épaules vers le bas : le corps monte de quelques centimètres.',
+      'Relâche lentement. C’est l’allumage des muscles de tes tractions.',
+    ], 'Plier les bras.'],
+    ['pompes-inclinees', 'Pompes inclinées', 'echauffement', 'inclinePush', 'Pectoraux, triceps, épaules', [
+      'Mains sur une chaise ou un meuble stable, corps gainé.',
+      'Descends la poitrine jusqu’au bord, puis pousse.',
+      'Rythme tranquille : c’est pour préparer les épaules.',
+    ], 'Laisser le bassin s’affaisser.'],
+
+    // Pliométrie
+    ['pogos', 'Pogos', 'explosivite', 'pogo', 'Mollets, tendons, réactivité', [
+      'Petits sauts rapides, jambes presque tendues, sur l’avant des pieds.',
+      'Le contact au sol doit être le plus court possible, comme un ressort.',
+      'Les chevilles font le travail, les genoux plient à peine.',
+    ], 'Écraser les talons au sol.', 'Moins haut, plus lentement.', 'Sur une jambe.'],
+    ['sauts-groupes', 'Sauts genoux groupés', 'explosivite', 'tuckJump', 'Quadriceps, fessiers, abdos', [
+      'Saute le plus haut possible et ramène les genoux vers la poitrine.',
+      'Reçois-toi en souplesse, genoux dans l’axe, et enchaîne.',
+      'Arrête la série dès que les sauts baissent.',
+    ], 'Courber le dos pour aller chercher les genoux.'],
+    ['sauts-contrebas', 'Sauts en contrebas', 'explosivite', 'depthJump', 'Jambes complètes, réactivité', [
+      'Debout sur une marche ou une chaise basse (30 cm environ), laisse-toi tomber, ne saute pas.',
+      'Dès que tes pieds touchent le sol, rebondis le plus haut possible.',
+      'Le contact doit être bref : touche et repars. Repos complet entre chaque saut.',
+    ], 'Partir d’un support trop haut. Au-delà de 40 cm, le rebond ralentit.', 'Juste la réception, sans rebond.', 'Rebond en longueur.'],
+    ['bonds-enchaines', 'Bonds enchaînés', 'explosivite', 'broadjump', 'Fessiers, ischios, quadriceps', [
+      'Trois bonds en longueur pieds joints, sans pause entre eux.',
+      'Les bras lancent chaque bond.',
+      'Cherche la distance et un temps au sol court.',
+    ], 'S’arrêter entre les bonds.'],
+    ['sauts-lateraux-joints', 'Sauts latéraux pieds joints', 'explosivite', 'latHops', 'Mollets, hanches, appuis', [
+      'Pieds joints, saute de part et d’autre d’une ligne, le plus vite possible.',
+      'Contacts courts, buste stable, regard devant.',
+      'C’est le transfert latéral rapide du swing.',
+    ], 'Sauter haut au lieu de sauter vite.'],
+    ['cloche-pied', 'Sauts à cloche-pied', 'explosivite', 'hop', 'Jambe complète, cheville, équilibre', [
+      'Sur une jambe, enchaîne des sauts vers l’avant.',
+      'Reçois-toi sur l’avant du pied, genou dans l’axe, et repars aussitôt.',
+      'Fais le même nombre de sauts de chaque côté.',
+    ], 'Laisser le genou rentrer à la réception.', 'Un saut à la fois, avec réception stabilisée.'],
+    ['fentes-sautees', 'Fentes sautées', 'explosivite', 'jumpLunge', 'Quadriceps, fessiers', [
+      'En fente, saute et inverse les jambes en l’air.',
+      'Reçois-toi directement en fente, genou arrière près du sol.',
+      'Garde le buste droit et le rythme régulier.',
+    ], 'Se recevoir genoux tendus.'],
+
+    // Lancers
+    ['lancer-rotatif', 'Lancer rotatif au médecine-ball', 'lancers', 'mbRotThrow', 'Hanches, abdos obliques, épaules', [
+      'De profil à un mur, ballon tenu à hauteur de hanche côté arrière.',
+      'Lance le ballon contre le mur en tournant violemment les hanches, puis le buste : comme un swing.',
+      'Rattrape, replace-toi, et relance. Chaque lancer est un effort maximal.',
+    ], 'Lancer avec les bras. La puissance vient des hanches qui tournent en premier.', 'Sans médecine-ball : rotations explosives à l’élastique.'],
+    ['lancer-pousse-rotatif', 'Lancer poussé en rotation', 'lancers', 'mbShotPut', 'Hanches, obliques, poitrine', [
+      'De profil au mur, ballon contre l’épaule arrière, coude sous le ballon.',
+      'Tourne les hanches puis pousse le ballon vers le mur comme un lancer de poids.',
+      'C’est le test de puissance qui prédit le mieux la vitesse de club.',
+    ], 'Pousser avant que les hanches aient tourné.'],
+    ['lancer-poitrine', 'Lancer poitrine au médecine-ball', 'lancers', 'mbChest', 'Pectoraux, triceps, épaules', [
+      'Face à un mur, ballon contre la poitrine.',
+      'Pousse le ballon le plus fort possible contre le mur, bras qui finissent tendus.',
+      'Rattrape et relance aussitôt.',
+    ], 'Lancer en cloche : la trajectoire doit être tendue.'],
+    ['lancer-au-dessus', 'Lancer au sol par-dessus la tête', 'lancers', 'mbSlam', 'Dorsaux, abdos, chaîne complète', [
+      'Ballon tenu bras tendus au-dessus de la tête, sur la pointe des pieds.',
+      'Écrase-le au sol devant toi de toutes tes forces en fléchissant les hanches.',
+      'Ramasse-le, remonte, et recommence.',
+    ], 'Arrondir le dos pour ramasser le ballon.', undefined, 'Utilise un ballon qui ne rebondit pas trop pour enchaîner.'],
+
+    // Haut du corps
+    ['tractions-strictes', 'Tractions strictes', 'haut', 'pullup', 'Grand dorsal, biceps, avant-bras', [
+      'Départ bras tendus, épaules engagées vers le bas.',
+      'Monte jusqu’au menton au-dessus de la barre, sans élan.',
+      'Redescends en contrôle jusqu’à bras tendus.',
+    ], 'Les demi-répétitions. Bras tendus en bas, toujours.', 'Tractions assistées à l’élastique.', 'Monte le plus vite possible.'],
+    ['rowing-inverse', 'Rowing inversé sous une table', 'haut', 'invRow', 'Haut du dos, biceps', [
+      'Allongé sous une table solide, mains au bord, corps gainé en planche.',
+      'Tire la poitrine jusqu’à la table, omoplates serrées.',
+      'Redescends lentement jusqu’à bras tendus.',
+    ], 'Laisser les hanches tomber.', 'Pieds plus près, genoux pliés.', 'Pieds surélevés sur une chaise.'],
+    ['rowing-un-bras', 'Rowing un bras à l’élastique', 'haut', 'row', 'Haut du dos, rotation du buste', [
+      'Élastique accroché devant toi, en fente, une main sur l’élastique.',
+      'Tire le coude vers l’arrière, près du corps, en gardant le buste face à l’avant.',
+      'Résister à la rotation fait aussi travailler les abdos.',
+    ], 'Tourner les épaules pour tirer plus loin.'],
+    ['rotation-externe', 'Rotation externe à l’élastique', 'haut', 'extRot', 'Coiffe des rotateurs', [
+      'Coude collé au corps, plié à 90 degrés, élastique tendu dans la main.',
+      'Tourne l’avant-bras vers l’extérieur sans décoller le coude.',
+      'Reviens lentement. Ces petits muscles protègent l’épaule à chaque swing.',
+    ], 'Décoller le coude du corps.'],
+    ['pompes-pieds-sureleves', 'Pompes pieds surélevés', 'haut', 'feetUpPush', 'Pectoraux, épaules, triceps', [
+      'Pieds sur une chaise, mains au sol un peu plus larges que les épaules.',
+      'Descends la poitrine près du sol, coudes à 45 degrés.',
+      'Pousse en gardant le corps droit.',
+    ], 'Cambrer le bas du dos.'],
+    ['pompes-explosives', 'Pompes explosives', 'haut', 'plyoPush', 'Pectoraux, triceps, explosivité', [
+      'Descends en contrôle, puis pousse si fort que les mains décollent du sol.',
+      'Reçois-toi bras souples et enchaîne.',
+      'Arrête la série dès que les mains ne décollent plus.',
+    ], 'Se recevoir bras tendus.', 'Mains sur une chaise.', 'Frappe dans les mains en l’air.'],
+    ['turkish-get-up', 'Turkish get-up', 'haut', 'getUp', 'Épaules, gainage complet', [
+      'Allongé, kettlebell tenu bras tendu vers le plafond, genou du même côté plié.',
+      'Monte sur le coude, puis sur la main, sans jamais quitter la kettlebell des yeux.',
+      'Le bras reste vertical tout le long. Redescends dans l’ordre inverse.',
+    ], 'Laisser le bras chargé partir en arrière.', 'Sans poids, avec une chaussure en équilibre sur le poing.', 'Va jusqu’à la position debout.'],
+
+    // Bas du corps
+    ['souleve-elastique', 'Soulevé de terre à l’élastique', 'bas', 'rdl2', 'Ischios, fessiers, bas du dos', [
+      'Debout sur l’élastique, mains qui le tiennent devant les cuisses.',
+      'Pousse les fesses en arrière, dos plat, jusqu’à sentir l’étirement des ischios.',
+      'Remonte en serrant les fessiers, vite.',
+    ], 'Arrondir le dos.'],
+    ['pont-fessier', 'Pont fessier', 'bas', 'bridge', 'Fessiers, ischios', [
+      'Allongé sur le dos, pieds à plat, genoux pliés.',
+      'Pousse dans les talons pour monter le bassin jusqu’à l’alignement épaules, hanches, genoux.',
+      'Serre les fessiers 2 secondes en haut.',
+    ], 'Cambrer le dos en haut.', undefined, 'Hip thrust sur une jambe.'],
+    ['nordic-negatif', 'Nordic curl négatif', 'bas', 'nordic', 'Ischio-jambiers', [
+      'À genoux, chevilles bloquées sous un canapé ou tenues par quelqu’un.',
+      'Descends le buste vers l’avant le plus lentement possible, corps droit des genoux aux épaules.',
+      'Rattrape-toi avec les mains, puis remonte en t’aidant des bras.',
+    ], 'Plier les hanches pour freiner moins.', 'Descends seulement à mi-chemin.', 'Remonte avec les ischios.'],
+    ['fente-laterale', 'Fente latérale', 'bas', 'sideLunge', 'Adducteurs, fessiers, quadriceps', [
+      'Grand pas sur le côté, descends sur cette jambe en poussant les fesses en arrière.',
+      'L’autre jambe reste tendue, pied à plat.',
+      'Pousse pour revenir au centre. C’est le transfert latéral du swing.',
+    ], 'Laisser le genou fléchi dépasser loin devant le pied.'],
+    ['cossack', 'Cossack squat', 'bas', 'cossack', 'Adducteurs, hanches, chevilles', [
+      'Pieds très écartés, descends sur une jambe jusqu’en bas.',
+      'La jambe tendue pointe les orteils vers le plafond.',
+      'Passe d’un côté à l’autre sans remonter complètement.',
+    ], 'Décoller le talon de la jambe pliée.', 'Tiens-toi à un support.'],
+    ['copenhagen', 'Gainage Copenhague', 'bas', 'copenhagen', 'Adducteurs, obliques', [
+      'Sur le côté, avant-bras au sol, pied du dessus posé sur une chaise.',
+      'Monte le bassin pour aligner le corps, la jambe du dessous décolle.',
+      'Les adducteurs portent le poids : ils protègent l’aine des mouvements violents.',
+    ], 'Laisser le bassin tomber vers l’arrière.', 'Genou posé sur la chaise au lieu du pied.'],
+
+    // Gainage et dos
+    ['dead-bug', 'Dead bug', 'gainage', 'deadBug', 'Abdos profonds, bas du dos', [
+      'Sur le dos, bras vers le plafond, hanches et genoux à 90 degrés.',
+      'Tends un bras derrière la tête et la jambe opposée, sans décoller le bas du dos.',
+      'Reviens et change de côté. Lent et contrôlé.',
+    ], 'Laisser le bas du dos se creuser.'],
+    ['bird-dog', 'Bird dog', 'gainage', 'birdDog', 'Bas du dos, fessiers, gainage', [
+      'À quatre pattes, tends un bras devant et la jambe opposée derrière.',
+      'Le bassin ne bascule pas. Tiens 8 secondes.',
+      'Reviens sans poser, et recommence. Exercice clé pour un dos qui tient la répétition des swings.',
+    ], 'Monter la jambe trop haut en cambrant.'],
+    ['curl-up', 'Curl-up', 'gainage', 'curlUp', 'Grands droits, gainage', [
+      'Sur le dos, une jambe pliée, mains sous le bas du dos.',
+      'Décolle juste la tête et les épaules de quelques centimètres, sans plier la nuque. Tiens 8 secondes.',
+      'Le bas du dos garde sa courbe naturelle : c’est le gainage qui protège la colonne.',
+    ], 'Faire un crunch complet en enroulant le dos.'],
+
+    // Vitesse de swing
+    ['swings-progressifs', 'Swings progressifs', 'golf', 'swing', 'Échauffement golf', [
+      'Commence par des demi-swings au fer 7, puis des swings complets.',
+      'Monte progressivement jusqu’au driver, à 80 % de ta vitesse.',
+      'Tu dois être chaud avant le premier swing à fond.',
+    ], 'Taper à fond dès les premières balles.'],
+    ['swing-retourne', 'Swings à vide club retourné', 'golf', 'swingFast', 'Vitesse de rotation, système nerveux', [
+      'Tiens le driver par la tête : il devient plus léger et tu swingues plus vite.',
+      'Swingue le plus vite possible, en cherchant le bruit le plus fort après la balle.',
+      'Fais aussi des swings du côté opposé : ça équilibre le corps et améliore la vitesse.',
+    ], 'Perdre ton équilibre. Vitesse maximale, mais finish tenu.'],
+    ['drive-max', 'Drives à fond', 'golf', 'swing', 'Vitesse de club', [
+      'Tape chaque drive à vitesse maximale, avec le R10.',
+      'Prends 30 secondes entre chaque balle : la qualité avant la quantité.',
+      'Note la vitesse de club la plus haute et la moyenne de la série.',
+    ], 'Enchaîner les balles sans récupérer.'],
+
+    // Course
+    ['seuil', 'Allure seuil', 'course', 'run', 'Endurance, allure soutenue', [
+      'Allure soutenue mais tenable, autour de ton allure sur 10 km.',
+      'Tu peux dire quelques mots, pas tenir une conversation.',
+      'Régulier du début à la fin de chaque portion.',
+    ], 'Partir trop vite et finir à l’arrêt.'],
+    ['cotes', 'Montées de côte', 'course', 'sprint', 'Puissance de course, mollets', [
+      'Sur une côte assez raide, monte vite, buste légèrement penché, genoux hauts.',
+      'Redescends en trottinant ou en marchant.',
+      'C’est de la musculation en courant, avec peu d’impact.',
+    ], 'Se pencher en arrière en montée.'],
+    ['course-allure', 'Course à allure soutenue', 'course', 'run', 'Endurance', [
+      'Échauffe-toi 10 à 15 minutes en footing.',
+      'Cours la distance à une allure soutenue et régulière.',
+      'Reporte le temps et la distance de ta montre.',
+    ], 'Partir trop vite sur le premier kilomètre.'],
+
+    // Tests
+    ['test-detente', 'Test : détente verticale', 'tests', 'squatjump', 'Puissance des jambes', [
+      'Debout de profil contre un mur, marque la hauteur atteinte bras tendu.',
+      'Saute avec élan des bras et touche le plus haut possible.',
+      'La différence entre les deux marques est ta détente. 3 essais, garde le meilleur.',
+    ], 'Faire un pas d’élan.'],
+    ['test-longueur', 'Test : saut en longueur sans élan', 'tests', 'broadjump', 'Puissance des jambes', [
+      'Pieds joints derrière une ligne, saute le plus loin possible.',
+      'Réception stable, sans reculer.',
+      'Mesure de la ligne jusqu’aux talons. 3 essais, garde le meilleur.',
+    ], 'Tomber en arrière à la réception : l’essai ne compte pas.'],
+    ['test-sprint', 'Test : sprint 20 m', 'tests', 'sprint', 'Vitesse', [
+      'Départ debout, sur du plat.',
+      'Filme au ralenti avec le téléphone posé de côté à l’arrivée, ou fais chronométrer.',
+      '2 essais avec 3 minutes de repos, garde le meilleur.',
+    ], 'Ralentir avant la ligne.'],
+    ['test-tractions', 'Test : tractions strictes', 'tests', 'pullup', 'Force de tirage', [
+      'Une seule série, au maximum.',
+      'Bras tendus en bas, menton au-dessus de la barre, sans élan.',
+      'Seules les répétitions propres comptent.',
+    ], 'Les demi-répétitions.'],
+    ['test-pompes', 'Test : pompes', 'tests', 'pushup', 'Force de poussée', [
+      '3 minutes après les tractions.',
+      'Une série au maximum, poitrine près du sol, sans pause en haut.',
+      'Arrête quand la forme se dégrade.',
+    ], 'Laisser les hanches tomber.'],
+    ['test-lancer-rotatif', 'Test : lancer rotatif', 'tests', 'mbShotPut', 'Puissance de rotation', [
+      'Médecine-ball de 3 kg, de profil, ballon contre l’épaule arrière.',
+      'Lance le plus loin possible en tournant, sans dépasser la ligne avec le pied avant.',
+      'Mesure jusqu’à l’impact. 3 essais de chaque côté, garde le meilleur.',
+    ], 'Faire un pas en avant.'],
+    ['test-lancer-poitrine', 'Test : lancer poitrine assis', 'tests', 'mbChestSeated', 'Puissance de poussée', [
+      'Assis sur une chaise, dos collé au dossier, pieds à plat.',
+      'Lance le médecine-ball de 3 kg le plus loin possible depuis la poitrine.',
+      'Mesure jusqu’à l’impact. 3 essais, garde le meilleur.',
+    ], 'Décoller le dos de la chaise.'],
+  ];
+  return defs.map(([id, name, cat, anim, muscles, steps, avoid, easier, harder]) => ({ id, name, cat, anim, muscles, steps, avoid, easier, harder }));
+}

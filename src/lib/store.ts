@@ -14,10 +14,20 @@ export interface EntryData {
   timeSec?: number;
   /** Résultat d'un test. */
   value?: number;
-  /** Figure : étape choisie ce jour-là (à partir de 0). */
-  level?: number;
-  /** Figure : réponses au diagnostic, de 0 (point faible) à 2 (acquis), par verrou. */
-  answers?: Record<string, number>;
+  /** Charge utilisée par exercice (élastique, kettlebell, médecine-ball). */
+  loads?: Record<string, string>;
+  /** Pesée : poids en kg (dans `value`). Sommeil : heures de coucher et de lever, "00:15". */
+  bed?: string;
+  wake?: string;
+  /** Vitesse de club au driver : maximale et moyenne. */
+  max?: number;
+  avg?: number;
+  /** Déplacements de la semaine : séance vers jour (0 = lundi). */
+  moves?: Record<string, number>;
+  /** Ajustements validés : clé d'exercice vers changement. */
+  adjust?: Record<string, { reps?: number; load?: string; since: string }>;
+  /** Propositions écartées : clé d'exercice vers jour de la séance concernée. */
+  dismissed?: Record<string, string>;
 }
 
 export interface Entry {
@@ -36,8 +46,8 @@ interface Snapshot {
   pending: number;
 }
 
-const LS_ENTRIES = 'tdb.entries.v2';
-const LS_PENDING = 'tdb.pending.v2';
+const LS_ENTRIES = 'tdb.entries.v3';
+const LS_PENDING = 'tdb.pending.v3';
 const PAGE = 1000;
 
 function read<T>(key: string, fallback: T): T {
@@ -175,6 +185,27 @@ export function setUser(id: string | null) {
   if (id === userId) return;
   userId = id;
   if (id) void sync();
+}
+
+/**
+ * Remise à zéro complète : efface tout sur l'appareil et dans Supabase.
+ * Renvoie false si la suppression en ligne a échoué (rien n'est alors effacé localement).
+ */
+export async function resetAll(): Promise<boolean> {
+  if (supabase && userId) {
+    const { error } = await supabase.from('completions').delete().eq('user_id', userId);
+    if (error) return false;
+  }
+  entries = {};
+  pending = [];
+  persist();
+  try {
+    localStorage.removeItem('tdb.player.v2');
+  } catch {
+    // Stockage indisponible : rien à effacer.
+  }
+  emit();
+  return true;
 }
 
 /** À la déconnexion, les données quittent l'appareil. Elles restent dans Supabase. */

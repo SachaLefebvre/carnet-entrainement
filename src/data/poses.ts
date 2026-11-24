@@ -26,13 +26,14 @@ export interface Pose {
   club?: number;
 }
 
-export type Anchor = Pt | 'hA' | 'hB' | 'fA' | 'fB' | 'sh' | 'hip';
+export type Anchor = Pt | 'hA' | 'hB' | 'fA' | 'fB' | 'sh' | 'hip' | 'hands';
 
 export type Prop =
   | { t: 'bar'; at: Pt }
   | { t: 'wall'; x: number }
   | { t: 'box'; x: number; y: number; w: number; h: number }
-  | { t: 'band'; from: Anchor; to: Anchor };
+  | { t: 'band'; from: Anchor; to: Anchor }
+  | { t: 'ball'; at: Anchor; r?: number };
 
 export interface Anim {
   frames: Pose[];
@@ -98,7 +99,7 @@ const PISTOL_BOTTOM: Pose = { hip: [84, 158], sh: [106, 124], hA: [146, 118], fA
 
 const pistol: Anim = { frames: [PISTOL_TOP, PISTOL_BOTTOM], knee: [1, -0.6], ms: 1200, pause: 300, still: 1 };
 
-export const ANIMS: Record<string, Anim> = {
+const BASE: Record<string, Anim> = {
   // Figures : L-sit
   support: { frames: [{ ...SEAT, ...SUPPORT_LEGS }], props: [PARA] },
   supportFeet: { frames: [{ ...SEAT, fA: [134, 171], toeA: -75 }], knee: [0, -1], props: [PARA] },
@@ -533,3 +534,507 @@ export const ANIMS: Record<string, Anim> = {
     still: 1,
   },
 };
+
+// ---------------------------------------------------------------------------
+// Programme v3 : mobilité golf, échauffement, pliométrie, lancers, force, gainage.
+
+const STAND: Pose = { hip: [100, 110], sh: [100, 70], hA: [103, 111], fA: [100, 171] };
+const FRONT: Pose = { hip: [100, 110], sh: [100, 70], hA: [84, 112], hB: [116, 112], ...FRONT_FEET };
+const LYING = { hip: [100, 166] as Pt, sh: [60, 166] as Pt };
+const QUAD_HANDS: Pose = { ...QUAD, hA: [140, 173] };
+const SEATED = { hip: [80, 128] as Pt, sh: [82, 88] as Pt, fA: [112, 171] as Pt };
+const CHAIR: Prop = { t: 'box', x: 50, y: 130, w: 36, h: 45 };
+const BALL: Prop = { t: 'ball', at: 'hands' };
+const LUNGE: Pose = { hip: [96, 136], sh: [98, 96], hA: [100, 134], fA: [126, 171], fB: [60, 168], toeB: 90 };
+
+const MORE: Record<string, Anim> = {
+  // Mobilité
+  neckTilt: {
+    frames: [
+      { ...FRONT, head: [-0.45, -0.9] },
+      { ...FRONT, head: [0.45, -0.9] },
+    ],
+    front: true,
+    ms: 1300,
+    pause: 400,
+  },
+  shoulderCircle: {
+    frames: [
+      { ...STAND, hA: [100, 111] },
+      { ...STAND, hA: [140, 72] },
+      { ...STAND, hA: [100, 30] },
+      { ...STAND, hA: [62, 74] },
+    ],
+    loop: 'cycle',
+    ms: 650,
+    pause: 0,
+    still: 1,
+  },
+  wristCircles: {
+    frames: [
+      { ...STAND, hA: [136, 70] },
+      { ...STAND, hA: [138, 76] },
+      { ...STAND, hA: [134, 80] },
+      { ...STAND, hA: [132, 74] },
+    ],
+    elbow: [0, 1],
+    loop: 'cycle',
+    ms: 260,
+    pause: 0,
+  },
+  wristRock: {
+    frames: [QUAD_HANDS, { ...QUAD, hip: [108, 134], sh: [150, 134], hA: [140, 173] }],
+    knee: [0.3, 1],
+    ms: 1000,
+    pause: 300,
+  },
+  wristHinge: {
+    frames: [
+      { ...STAND, hA: [126, 96], club: 35 },
+      { ...STAND, hA: [126, 96], club: -45 },
+    ],
+    elbow: [0, 1],
+    ms: 800,
+    pause: 300,
+  },
+  forearmRot: {
+    frames: [
+      { ...FRONT, hA: [98, 98], hB: [102, 98], club: -55 },
+      { ...FRONT, hA: [98, 98], hB: [102, 98], club: -125 },
+    ],
+    front: true,
+    ms: 800,
+    pause: 300,
+  },
+  kneelRot: {
+    frames: [
+      { hip: [100, 140], sh: [100, 100], hA: [80, 98], hB: [120, 98], kA: [92, 170], kB: [108, 170], fA: [88, 172], fB: [112, 172], toeA: 180, toeB: 0, head: [-0.45, -0.9], club: 0 },
+      { hip: [100, 140], sh: [100, 100], hA: [70, 92], hB: [110, 104], kA: [92, 170], kB: [108, 170], fA: [88, 172], fB: [112, 172], toeA: 180, toeB: 0, head: [-0.6, -0.8], club: 10 },
+      { hip: [100, 140], sh: [100, 100], hA: [90, 104], hB: [130, 92], kA: [92, 170], kB: [108, 170], fA: [88, 172], fB: [112, 172], toeA: 180, toeB: 0, head: [0.6, -0.8], club: -10 },
+    ],
+    front: true,
+    ms: 900,
+    pause: 250,
+    still: 1,
+  },
+  hipIR: {
+    frames: [
+      { hip: [100, 160], sh: [100, 120], hA: [80, 160], hB: [120, 160], kA: [112, 169], fA: [84, 172], kB: [138, 167], fB: [148, 173] },
+      { hip: [100, 160], sh: [100, 120], hA: [80, 160], hB: [120, 160], kA: [112, 169], fA: [84, 172], kB: [136, 165], fB: [152, 156] },
+    ],
+    front: true,
+    ms: 800,
+    pause: 700,
+  },
+  quadRock: {
+    frames: [QUAD_HANDS, { hip: [84, 142], sh: [124, 140], hA: [140, 173], fA: [69, 168], toeA: 180 }],
+    knee: [0.3, 1],
+    ms: 1100,
+    pause: 300,
+  },
+  ankleCircles: {
+    frames: [
+      { hip: [96, 110], sh: [96, 70], hA: [99, 110], fA: [100, 171], fB: [132, 140], toeA: 0, toeB: -40 },
+      { hip: [96, 110], sh: [96, 70], hA: [99, 110], fA: [100, 171], fB: [132, 140], toeA: 0, toeB: 10 },
+      { hip: [96, 110], sh: [96, 70], hA: [99, 110], fA: [100, 171], fB: [132, 140], toeA: 0, toeB: 60 },
+      { hip: [96, 110], sh: [96, 70], hA: [99, 110], fA: [100, 171], fB: [132, 140], toeA: 0, toeB: 10 },
+    ],
+    knee: [1, -0.3],
+    loop: 'cycle',
+    ms: 350,
+    pause: 0,
+  },
+
+  // Échauffement et renforcement du bas de jambe
+  jumpRope: {
+    frames: [
+      { ...FRONT, hA: [80, 112], hB: [120, 112] },
+      { ...FRONT, hip: [100, 103], sh: [100, 63], hA: [80, 105], hB: [120, 105], fA: [88, 165], fB: [112, 165] },
+    ],
+    front: true,
+    ms: 170,
+    pause: 40,
+  },
+  calfBent: {
+    frames: [
+      { hip: [90, 118], sh: [94, 78], hA: [138, 90], fA: [97, 166], toeA: -15, fB: [86, 150], toeB: 60 },
+      { hip: [95, 106], sh: [99, 66], hA: [138, 84], fA: [102.5, 153.5], toeA: 60, fB: [90, 138], toeB: 60 },
+    ],
+    knee: [1, -0.3],
+    props: [
+      { t: 'box', x: 92, y: 168, w: 40, h: 11 },
+      { t: 'wall', x: 142 },
+    ],
+  },
+  calfEcc: {
+    frames: [
+      { hip: [101, 93], sh: [102, 53], hA: [138, 80], fA: [102.5, 153.5], toeA: 60, fB: [90, 136], toeB: 60 },
+      { hip: [97, 105.5], sh: [98, 65.5], hA: [138, 84], fA: [97, 166], toeA: -15, fB: [86, 148], toeB: 60 },
+    ],
+    loop: 'restart',
+    ms: 2400,
+    pause: 0,
+    still: 1,
+    props: [
+      { t: 'box', x: 92, y: 168, w: 40, h: 11 },
+      { t: 'wall', x: 142 },
+    ],
+  },
+  tibPost: {
+    frames: [
+      { ...SEATED, hA: [104, 128], toeA: 0 },
+      { ...SEATED, hA: [104, 128], toeA: -35 },
+    ],
+    knee: [1, -0.6],
+    ms: 700,
+    pause: 300,
+    props: [CHAIR, { t: 'band', from: 'fA', to: [168, 171] }],
+  },
+  shortFoot: {
+    frames: [
+      { ...STAND, toeA: 0 },
+      { ...STAND, toeA: -8 },
+    ],
+    ms: 900,
+    pause: 1400,
+  },
+  sideAbd: {
+    frames: [
+      { ...LYING, sh: [60, 160], hA: [96, 154], hB: [44, 170], fA: [160, 164], fB: [160, 170], head: [-1, 0], toeA: 0, toeB: 0 },
+      { ...LYING, sh: [60, 160], hA: [96, 154], hB: [44, 170], fA: [154, 136], fB: [160, 170], head: [-1, 0], toeA: -20, toeB: 0 },
+    ],
+    elbow: [0, -1],
+    ms: 700,
+    pause: 500,
+    still: 1,
+  },
+  legSwing: {
+    frames: [
+      { hip: [100, 110], sh: [100, 70], hA: [140, 82], fA: [100, 171], fB: [142, 148], toeB: -20 },
+      { hip: [100, 110], sh: [100, 70], hA: [140, 82], fA: [100, 171], fB: [62, 156], toeB: 60 },
+    ],
+    knee: [1, -0.2],
+    ms: 600,
+    pause: 0,
+    props: [{ t: 'wall', x: 148 }],
+  },
+  walkLunge: {
+    frames: [{ ...STAND, fA: [104, 171], fB: [96, 171] }, LUNGE],
+    knee: [1, -0.4],
+    kneeB: [0, 1],
+    ms: 900,
+    pause: 300,
+    still: 1,
+  },
+  highKnees: {
+    frames: [
+      { hip: [98, 108], sh: [102, 68], hA: [86, 100], hB: [122, 84], fA: [118, 128], fB: [96, 171], toeA: 50, toeB: 0 },
+      { hip: [98, 108], sh: [102, 68], hA: [122, 84], hB: [86, 100], fA: [96, 171], fB: [118, 128], toeA: 0, toeB: 50 },
+    ],
+    elbow: [-0.4, 1],
+    knee: [1, -0.3],
+    ms: 230,
+    pause: 0,
+  },
+  scapPull: {
+    frames: [
+      { hip: [97, 109], sh: [99, 69], hA: [100, 27], fA: [84, 153], head: [0, -1] },
+      { hip: [97, 105], sh: [99, 65], hA: [100, 27], fA: [84, 149], head: [0, -1] },
+    ],
+    elbow: [0.5, 1],
+    knee: [1, 0.3],
+    ground: false,
+    ms: 700,
+    pause: 500,
+    props: [{ t: 'bar', at: BAR }],
+  },
+  inclinePush: {
+    frames: [
+      { hip: [94, 125.5], sh: [130, 100], hA: [134, 140], fA: [38, 165], toeA: 90 },
+      { hip: [92.7, 138.9], sh: [128, 122], hA: [134, 140], fA: [38, 165], toeA: 90 },
+    ],
+    elbow: [-1, -1],
+    still: 1,
+    props: [{ t: 'box', x: 120, y: 144, w: 44, h: 31 }],
+  },
+  extRot: {
+    frames: [
+      { ...FRONT, eA: [88, 91], hA: [104, 95] },
+      { ...FRONT, eA: [88, 91], hA: [68, 96] },
+    ],
+    front: true,
+    ms: 800,
+    pause: 300,
+    props: [{ t: 'band', from: 'hA', to: [190, 95] }],
+  },
+
+  // Pliométrie
+  pogo: {
+    frames: [
+      { ...STAND, hA: [96, 108], toeA: 0 },
+      { hip: [100, 101], sh: [100, 61], hA: [96, 99], fA: [100, 162], toeA: 55 },
+    ],
+    ms: 160,
+    pause: 50,
+  },
+  tuckJump: {
+    frames: [
+      { ...STAND },
+      { hip: [94, 128], sh: [104, 90], hA: [80, 116], fA: [100, 171] },
+      { hip: [100, 70], sh: [100, 30], hA: [124, 68], fA: [118, 88], toeA: 70 },
+      { hip: [94, 128], sh: [104, 90], hA: [130, 96], fA: [100, 171] },
+    ],
+    knee: [1, -0.3],
+    loop: 'cycle',
+    ms: 300,
+    pause: 60,
+    still: 2,
+  },
+  depthJump: {
+    frames: [
+      { hip: [62, 72], sh: [64, 32], hA: [64, 74], fA: [62, 131] },
+      { hip: [96, 141], sh: [108, 105], hA: [134, 110], fA: [108, 171] },
+      { hip: [108, 82], sh: [108, 42], hA: [110, 2], fA: [108, 143], toeA: 70 },
+    ],
+    knee: [1, -0.3],
+    loop: 'restart',
+    ms: 380,
+    pause: 60,
+    still: 1,
+    props: [{ t: 'box', x: 40, y: 135, w: 40, h: 40 }],
+  },
+  latHops: {
+    frames: [
+      { hip: [80, 112], sh: [80, 72], hA: [66, 112], hB: [94, 112], fA: [76, 171], fB: [84, 171], toeA: 180, toeB: 0 },
+      { hip: [100, 98], sh: [100, 58], hA: [86, 98], hB: [114, 98], fA: [96, 158], fB: [104, 158], toeA: 180, toeB: 0 },
+      { hip: [120, 112], sh: [120, 72], hA: [106, 112], hB: [134, 112], fA: [116, 171], fB: [124, 171], toeA: 180, toeB: 0 },
+    ],
+    front: true,
+    ms: 240,
+    pause: 70,
+    props: [{ t: 'box', x: 98, y: 172, w: 4, h: 3 }],
+  },
+  hop: {
+    frames: [
+      { hip: [62, 118], sh: [70, 80], hA: [50, 108], fA: [68, 171], fB: [46, 150], toeB: 120 },
+      { hip: [100, 96], sh: [108, 58], hA: [128, 80], fA: [108, 148], fB: [80, 140], toeA: 40, toeB: 100 },
+      { hip: [138, 118], sh: [146, 80], hA: [126, 108], fA: [144, 171], fB: [122, 150], toeB: 120 },
+    ],
+    knee: [1, -0.3],
+    kneeB: [1, 0.2],
+    loop: 'restart',
+    ms: 330,
+    pause: 80,
+    still: 1,
+  },
+  jumpLunge: {
+    frames: [
+      LUNGE,
+      { hip: [96, 100], sh: [98, 60], hA: [100, 98], fA: [114, 148], fB: [80, 150], toeA: 30, toeB: 60 },
+      { ...LUNGE, fA: [60, 168], toeA: 90, fB: [126, 171], toeB: 0 },
+    ],
+    knee: [1, -0.4],
+    kneeB: [1, -0.4],
+    ms: 320,
+    pause: 160,
+  },
+
+  // Lancers de médecine-ball
+  mbRotThrow: {
+    frames: [
+      { hip: [98, 114], sh: [94, 75], hA: [62, 112], hB: [66, 114], fA: [82, 171], fB: [118, 171], toeA: 180, toeB: 0, head: [-0.3, -1] },
+      { hip: [104, 110], sh: [108, 70], hA: [148, 64], hB: [150, 68], fA: [82, 171], fB: [118, 171], toeA: 180, toeB: 0, head: [0.4, -1] },
+    ],
+    front: true,
+    ms: 360,
+    pause: 650,
+    props: [BALL],
+  },
+  mbShotPut: {
+    frames: [
+      { hip: [96, 112], sh: [92, 73], hA: [108, 76], hB: [112, 80], fA: [82, 171], fB: [118, 171], toeA: 180, toeB: 0, head: [-0.3, -1] },
+      { hip: [104, 110], sh: [108, 70], hA: [150, 60], hB: [152, 64], fA: [82, 171], fB: [118, 171], toeA: 180, toeB: 0, head: [0.4, -1] },
+    ],
+    front: true,
+    elbow: [0, 1],
+    elbowB: [0, 1],
+    ms: 320,
+    pause: 700,
+    props: [BALL],
+  },
+  mbChest: {
+    frames: [
+      { hip: [96, 110], sh: [98, 70], hA: [112, 80], fA: [110, 171], fB: [80, 171] },
+      { hip: [98, 110], sh: [101, 70], hA: [140, 74], fA: [110, 171], fB: [80, 171] },
+    ],
+    elbow: [0, 1],
+    ms: 300,
+    pause: 650,
+    props: [{ t: 'ball', at: 'hA' }],
+  },
+  mbChestSeated: {
+    frames: [
+      { ...SEATED, hA: [98, 94] },
+      { ...SEATED, hA: [124, 86] },
+    ],
+    knee: [1, -0.6],
+    elbow: [0, 1],
+    ms: 320,
+    pause: 650,
+    props: [CHAIR, { t: 'ball', at: 'hA' }],
+  },
+  mbSlam: {
+    frames: [
+      { hip: [100, 106], sh: [100, 66], hA: [104, 26], fA: [100, 167], toeA: 30 },
+      { hip: [88, 130], sh: [114, 100], hA: [128, 138], fA: [100, 171] },
+    ],
+    knee: [1, -0.3],
+    ms: 330,
+    pause: 650,
+    props: [{ t: 'ball', at: 'hA' }],
+  },
+
+  // Force
+  invRow: {
+    frames: [
+      { hip: [99.6, 155.8], sh: [139, 148], hA: [140, 104], fA: [40, 168], toeA: -60 },
+      { hip: [97.2, 138.8], sh: [133, 120], hA: [140, 104], fA: [40, 168], toeA: -60 },
+    ],
+    elbow: [-1, 1],
+    still: 1,
+    props: [{ t: 'box', x: 118, y: 96, w: 70, h: 6 }],
+  },
+  feetUpPush: {
+    frames: [
+      { hip: [92.3, 134.8], sh: [132, 134], hA: [124, 173], fA: [32, 136], toeA: 90 },
+      { hip: [95.9, 145.7], sh: [135, 152], hA: [124, 173], fA: [32, 136], toeA: 90 },
+    ],
+    elbow: [-1, -1],
+    still: 1,
+    props: [{ t: 'box', x: 12, y: 140, w: 38, h: 35 }],
+  },
+  plyoPush: {
+    frames: [
+      { hip: [100, 159], sh: [142, 155], hA: [124, 173], fA: [38, 165], toeA: 90 },
+      { hip: [97, 138], sh: [136, 122], hA: [128, 160], fA: [38, 165], toeA: 90 },
+    ],
+    elbow: [-1, -1],
+    ms: 300,
+    pause: 220,
+    still: 1,
+  },
+  getUp: {
+    frames: [
+      { ...LYING, hA: [60, 125], hB: [80, 170], fA: [160, 166], fB: [130, 171], head: [-1, 0], toeA: -60, toeB: -20 },
+      { hip: [100, 166], sh: [70, 140], hA: [70, 99], hB: [56, 170], fA: [160, 166], fB: [130, 171], toeA: -60, toeB: -20 },
+      { hip: [100, 166], sh: [88, 128], hA: [90, 87], hB: [62, 171], fA: [160, 166], fB: [130, 171], toeA: -60, toeB: -20 },
+    ],
+    knee: [0, -1],
+    kneeB: [0, -1],
+    elbowB: [0, 1],
+    ms: 1300,
+    pause: 450,
+    still: 2,
+    props: [{ t: 'ball', at: 'hA', r: 5.5 }],
+  },
+  rdl2: {
+    frames: [
+      { ...STAND, fA: [100, 171], fB: [97, 171] },
+      { hip: [90, 112], sh: [130, 101], hA: [131, 140], fA: [100, 171], fB: [97, 171] },
+    ],
+    knee: [1, -0.2],
+    props: [{ t: 'band', from: 'fA', to: 'hA' }],
+  },
+  bridge: {
+    frames: [
+      { ...LYING, hA: [98, 170], fA: [126, 171], head: [-1, 0] },
+      { hip: [92, 140], sh: [58, 165], hA: [96, 170], fA: [126, 171], head: [-1, 0] },
+    ],
+    knee: [0, -1],
+  },
+  nordic: {
+    frames: [
+      { hip: [100, 138], sh: [100, 98], hA: [108, 112], kA: [100, 168], fA: [70, 170], toeA: 180 },
+      { hip: [121, 147], sh: [149, 119], hA: [166, 142], kA: [100, 168], fA: [70, 170], toeA: 180 },
+    ],
+    elbow: [0, 1],
+    ms: 2200,
+    pause: 300,
+    loop: 'restart',
+    still: 1,
+    props: [{ t: 'box', x: 44, y: 152, w: 36, h: 12 }],
+  },
+  sideLunge: {
+    frames: [
+      { hip: [76, 140], sh: [80, 100], hA: [86, 122], hB: [96, 122], fA: [72, 171], fB: [138, 171], toeA: 180, toeB: 0 },
+      { hip: [100, 110], sh: [100, 70], hA: [94, 110], hB: [106, 110], fA: [72, 171], fB: [128, 171], toeA: 180, toeB: 0 },
+      { hip: [124, 140], sh: [120, 100], hA: [104, 122], hB: [114, 122], fA: [62, 171], fB: [128, 171], toeA: 180, toeB: 0 },
+    ],
+    front: true,
+    knee: [-1, 0],
+    kneeB: [1, 0],
+    ms: 800,
+    pause: 300,
+    still: 0,
+  },
+  cossack: {
+    frames: [
+      { hip: [74, 152], sh: [80, 112], hA: [96, 132], hB: [104, 132], fA: [70, 171], fB: [136, 171], toeA: 180, toeB: -60 },
+      { hip: [126, 152], sh: [120, 112], hA: [96, 132], hB: [104, 132], fA: [64, 171], fB: [130, 171], toeA: 240, toeB: 0 },
+    ],
+    front: true,
+    knee: [-1, 0],
+    kneeB: [1, 0],
+    ms: 1100,
+    pause: 300,
+  },
+  copenhagen: {
+    frames: [
+      { hip: [102, 162], sh: [64, 152], hA: [86, 173], hB: [100, 156], fA: [152, 138], fB: [150, 170], toeA: -70, toeB: -70 },
+      { hip: [104, 146], sh: [64, 150], hA: [86, 173], hB: [100, 142], fA: [152, 138], fB: [150, 156], toeA: -70, toeB: -70 },
+    ],
+    elbow: [0, 1],
+    ms: 900,
+    pause: 1300,
+    still: 1,
+    props: [{ t: 'box', x: 140, y: 142, w: 36, h: 33 }],
+  },
+
+  // Gainage et protection du dos
+  deadBug: {
+    frames: [
+      { ...LYING, hA: [60, 126], hB: [62, 126], fA: [128, 138], fB: [130, 138], toeA: 0, toeB: 0 },
+      { ...LYING, hA: [24, 158], hB: [62, 126], fA: [128, 138], fB: [160, 156], toeA: 0, toeB: -40 },
+    ],
+    knee: [0, -1],
+    kneeB: [0, -1],
+    ms: 1100,
+    pause: 500,
+    still: 1,
+  },
+  birdDog: {
+    frames: [
+      { ...QUAD, hA: [140, 173], hB: [140, 173], fB: [69, 168], toeB: 180 },
+      { ...QUAD, hA: [140, 173], hB: [180, 126], fB: [40, 128], toeB: 170 },
+    ],
+    knee: [0.3, 1],
+    kneeB: [0, 1],
+    ms: 1100,
+    pause: 800,
+    still: 1,
+  },
+  curlUp: {
+    frames: [
+      { ...LYING, hA: [99, 170], fA: [128, 171], fB: [160, 168], head: [-1, 0], toeB: -60 },
+      { hip: [100, 166], sh: [62, 156], hA: [99, 170], fA: [128, 171], fB: [160, 168], head: [-1, -0.3], toeB: -60 },
+    ],
+    knee: [0, -1],
+    ms: 900,
+    pause: 1400,
+    still: 1,
+  },
+};
+
+MORE.swingFast = { ...BASE.swing, ms: 330, pause: 160 };
+
+export const ANIMS: Record<string, Anim> = { ...BASE, ...MORE };

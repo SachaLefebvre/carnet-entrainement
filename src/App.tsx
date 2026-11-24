@@ -1,25 +1,25 @@
 import { useEffect, useState } from 'react';
 import type { Session as AuthSession } from '@supabase/supabase-js';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { setSpeedUnit, speedUnit, type SpeedUnit } from './lib/prefs';
 import { href, useRoute } from './lib/router';
-import { clearLocal, setUser, useStore, type SyncStatus } from './lib/store';
+import { clearLocal, resetAll, setUser, useStore, type SyncStatus } from './lib/store';
 import { supabase } from './lib/supabase';
-import { Icon, TopBar } from './ui';
-import { Home } from './views/Home';
-import { Figures, SkillPage } from './views/Figures';
+import { Icon, Segmented, TopBar } from './ui';
+import { Bilan } from './views/Bilan';
 import { ExercisePage, Library } from './views/Library';
 import { Login } from './views/Login';
-import { Plan } from './views/Plan';
 import { Player } from './views/Player';
+import { Programme } from './views/Programme';
 import { SessionPage } from './views/SessionPage';
 import { Stats } from './views/Stats';
+import { Today } from './views/Today';
 
 const TABS = [
-  { route: '', label: 'Accueil', icon: 'home' },
-  { route: 'planning', label: 'Planning', icon: 'calendar' },
-  { route: 'figures', label: 'Figures', icon: 'figure' },
-  { route: 'exercices', label: 'Exercices', icon: 'library' },
-  { route: 'stats', label: 'Stats', icon: 'stats' },
+  { route: '', label: 'Aujourd’hui', icon: 'home' },
+  { route: 'programme', label: 'Programme', icon: 'calendar' },
+  { route: 'progres', label: 'Progrès', icon: 'stats' },
+  { route: 'exercices', label: 'Bibliothèque', icon: 'library' },
 ] as const;
 
 const STATUS_TEXT: Record<SyncStatus, string> = {
@@ -28,6 +28,8 @@ const STATUS_TEXT: Record<SyncStatus, string> = {
   synced: 'Tout est synchronisé entre tes appareils.',
   offline: 'Hors ligne. Tes séances sont gardées sur cet appareil et partiront au retour du réseau.',
 };
+
+const SUB_PAGES = ['seance', 'exercice', 'compte', 'bilan'];
 
 export default function App() {
   const route = useRoute();
@@ -64,16 +66,15 @@ export default function App() {
 
   return (
     <ErrorBoundary resetKey={resetKey}>
-      {head === '' && <Home />}
-      {head === 'planning' && <Plan day={a} />}
+      {head === '' && <Today />}
+      {head === 'programme' && <Programme key={a ?? 'now'} day={a} />}
       {head === 'exercices' && <Library />}
-      {head === 'figures' && <Figures />}
-      {head === 'figure' && a && <SkillPage key={a} id={a} tab={b} />}
-      {head === 'stats' && <Stats tab={a} />}
+      {head === 'progres' && <Stats tab={a} />}
       {head === 'seance' && a && b && <SessionPage key={`${a}-${b}`} day={a} id={b} />}
       {head === 'exercice' && a && <ExercisePage id={a} />}
+      {head === 'bilan' && <Bilan key={a} monday={a} />}
       {head === 'compte' && <Account email={email} />}
-      {!isTab && !['seance', 'exercice', 'compte', 'figure'].includes(head) && (
+      {!isTab && !SUB_PAGES.includes(head) && (
         <main className="screen">
           <p className="muted">Cette page n’existe pas.</p>
           <a className="button" href={href()}>
@@ -98,9 +99,18 @@ export default function App() {
 
 function Account({ email }: { email: string | null }) {
   const { status, pending } = useStore();
+  const [unit, setUnit] = useState<SpeedUnit>(speedUnit());
+  const [confirm, setConfirm] = useState('');
+  const [resetState, setResetState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle');
   const signOut = async () => {
     await supabase?.auth.signOut();
     clearLocal();
+  };
+  const reset = async () => {
+    setResetState('busy');
+    const ok = await resetAll();
+    setResetState(ok ? 'done' : 'error');
+    setConfirm('');
   };
   return (
     <main className="screen">
@@ -111,6 +121,22 @@ function Account({ email }: { email: string | null }) {
           {STATUS_TEXT[status]}
           {pending > 0 && status !== 'local' ? ` ${pending} modification${pending > 1 ? 's' : ''} en attente.` : ''}
         </p>
+      </section>
+      <section className="panel">
+        <p className="panel-head">Unité de vitesse de club</p>
+        <Segmented
+          options={[
+            { id: 'km/h', label: 'km/h' },
+            { id: 'mph', label: 'mph' },
+          ]}
+          value={unit}
+          onChange={(next) => {
+            setUnit(next);
+            setSpeedUnit(next);
+          }}
+          label="Unité de vitesse"
+        />
+        <p className="muted small">Choisis la même unité que ton Garmin R10. Les valeurs déjà notées ne sont pas converties.</p>
       </section>
       {email && (
         <section className="panel">
@@ -124,6 +150,24 @@ function Account({ email }: { email: string | null }) {
       <section className="panel">
         <p className="panel-head">Installer l’app</p>
         <p className="muted">Sur Android, ouvre le menu de Chrome puis choisis « Ajouter à l’écran d’accueil ». L’app s’ouvrira ensuite comme une application, même hors ligne.</p>
+      </section>
+      <section className="panel danger-panel">
+        <p className="panel-head">Remettre à zéro</p>
+        <p className="muted small">Efface toutes les séances, tests, pesées, nuits et ajustements, sur cet appareil et dans la base en ligne. C’est définitif.</p>
+        {resetState === 'done' ? (
+          <p>Tout est effacé. Nouveau départ.</p>
+        ) : (
+          <>
+            <label className="field">
+              <span>Écris EFFACER pour confirmer</span>
+              <input value={confirm} onChange={(e) => setConfirm(e.target.value)} autoCapitalize="characters" />
+            </label>
+            <button type="button" className="button danger" disabled={confirm.trim().toUpperCase() !== 'EFFACER' || resetState === 'busy'} onClick={reset}>
+              {resetState === 'busy' ? 'Effacement…' : 'Tout effacer'}
+            </button>
+            {resetState === 'error' && <p className="error">L’effacement en ligne a échoué. Vérifie ta connexion et réessaie : rien n’a été effacé.</p>}
+          </>
+        )}
       </section>
     </main>
   );

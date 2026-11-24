@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Figure } from '../components/Figure';
 import { EXERCISES } from '../data/exercises';
-import { findSession, type Item, type Phase, type Session } from '../data/programme';
+import { findSession, TEST_BY_ID, type Equip, type Item, type Phase, type Session } from '../data/programme';
+import { EQUIP_LABEL, lastLoad, LOADS } from '../lib/adjust';
 import { back, replace } from '../lib/router';
 import { beep, buzz, keepAwake } from '../lib/sound';
-import { formatClock, formatMinutes } from '../lib/stats';
+import { formatClock, formatMinutes, formatTest, parseTest, TEST_INPUT, testKey } from '../lib/stats';
 import { getEntry, updateEntry, useStore } from '../lib/store';
 import { Icon, kindStyle, Ring } from '../ui';
 
@@ -23,9 +24,11 @@ interface Saved {
   startedAt: number;
   finishedAt?: number;
   sets: Record<string, number[]>;
+  loads?: Record<string, string>;
+  tests?: Record<string, number>;
 }
 
-const LS_PLAYER = 'tdb.player.v1';
+const LS_PLAYER = 'tdb.player.v2';
 
 function loadSaved(): Saved | null {
   try {
@@ -52,8 +55,7 @@ export function resumableSession(day: string): string | null {
 }
 
 export function buildSteps(session: Session): Step[] {
-  if (session.phases) return session.phases.map((phase, i, all) => ({ type: 'phase', phase, number: i + 1, total: all.length }));
-  const items = session.blocks.flatMap((block) => block.items.map((item) => ({ item, block: block.title })));
+  const items = session.blocks.filter((block) => !block.display).flatMap((block) => block.items.map((item) => ({ item, block: block.title })));
   const steps: Step[] = [];
   items.forEach(({ item, block }, i) => {
     for (let set = 1; set <= item.sets; set += 1) {
@@ -64,6 +66,8 @@ export function buildSteps(session: Session): Step[] {
       if (item.rest > 0 && !isLast) steps.push({ type: 'rest', seconds: item.rest });
     }
   });
+  // Course : l'échauffement (corde, tibias) puis le minuteur des phases.
+  if (session.phases) session.phases.forEach((phase, i, all) => steps.push({ type: 'phase', phase, number: i + 1, total: all.length }));
   return steps;
 }
 
@@ -248,12 +252,15 @@ export function Player({ day, id }: { day: string; id: string }) {
   const step = steps[Math.min(state.index, steps.length - 1)];
   const elapsed = ((state.finishedAt ?? now) - state.startedAt) / 1000;
 
-  const advance = (record?: { ex: string; value: number }) =>
+  const advance = (record?: { ex: string; value: number }, test?: { id: string; value: number }) =>
     setState((s) => {
       const index = s.index + 1;
       const sets = record ? { ...s.sets, [record.ex]: [...(s.sets[record.ex] ?? []), record.value] } : s.sets;
-      return { ...s, index, sets, finishedAt: index >= steps.length ? Date.now() : undefined };
+      const tests = test ? { ...(s.tests ?? {}), [test.id]: test.value } : s.tests;
+      return { ...s, index, sets, tests, finishedAt: index >= steps.length ? Date.now() : undefined };
     });
+
+  const setLoad = (ex: string, load: string) => setState((s) => ({ ...s, loads: { ...(s.loads ?? {}), [ex]: load } }));
 
   const previous = () =>
     setState((s) => {
@@ -269,7 +276,9 @@ export function Player({ day, id }: { day: string; id: string }) {
   const save = () => {
     const entry = getEntry(entries, day, id);
     const sets = Object.fromEntries(Object.entries(state.sets).filter(([, values]) => values.length > 0));
-    updateEntry(day, id, { done: true, note, data: { ...entry.data, durationSec: Math.round(elapsed), sets } });
+    const loads = { ...(entry.data.loads ?? {}), ...(state.loads ?? {}) };
+    updateEntry(day, id, { done: true, note, data: { ...entry.data, durationSec: Math.round(elapsed), sets, ...(Object.keys(loads).length ? { loads } : {}) } });
+    for (const [testId, value] of Object.entries(state.tests ?? {})) updateEntry(day, testKey(testId), { done: true, data: { value } });
     store(null);
     replace('seance', day, id);
   };
@@ -331,9 +340,18 @@ export function Player({ day, id }: { day: string; id: string }) {
         <span className="player-clock num">{formatClock(elapsed)}</span>
       </header>
 
-      {step.type === 'work' && <WorkStep key={state.index} step={step} onDone={advance} />}
+      {step.type === 'work' && step.item.test && <TestStep key={state.index} step={step} onDone={(test) => advance(undefined, test)} />}
+      {step.type === 'work' && !step.item.test && (
+        <WorkStep
+          key={state.index}
+          step={step}
+          load={step.item.equip ? (state.loads?.[step.item.ex] ?? lastLoad(entries, step.item.ex, step.item.adjustKey)) : undefined}
+          onLoad={(load) => setLoad(step.item.ex, load)}
+          onDone={advance}
+        />
+      )}
       {step.type === 'rest' && <RestStep key={state.index} seconds={step.seconds} next={nextWork} onDone={() => advance()} />}
-      {step.type === 'phase' && <PhaseStep key={state.index} step={step} first={state.index === 0} anim={session.anim} onDone={() => advance()} />}
+      {step.type === 'phase' && <PhaseStep key={state.index} step={step} first={step.number === 1} anim={session.anim} onDone={() => advance()} />}
 
       <footer className="player-foot">
         <button type="button" className="text-link as-button" onClick={previous} disabled={state.index === 0}>
@@ -347,7 +365,17 @@ export function Player({ day, id }: { day: string; id: string }) {
   );
 }
 
-function WorkStep({ step, onDone }: { step: Extract<Step, { type: 'work' }>; onDone: (record?: { ex: string; value: number }) => void }) {
+function WorkStep({
+  step,
+  load,
+  onLoad,
+  onDone,
+}: {
+  step: Extract<Step, { type: 'work' }>;
+  load?: string;
+  onLoad: (load: string) => void;
+  onDone: (record?: { ex: string; value: number }) => void;
+}) {
   const { item } = step;
   const exercise = EXERCISES[item.ex];
   const [reps, setReps] = useState(item.reps ?? 0);
@@ -414,6 +442,8 @@ function WorkStep({ step, onDone }: { step: Extract<Step, { type: 'work' }>; onD
           </>
         )}
 
+        {item.equip && <LoadPicker equip={item.equip} value={load} onChange={onLoad} />}
+        {item.contacts ? <p className="muted small">Contacts au sol : {item.sets * (item.reps ?? 0) * item.contacts * (item.perSide ? 2 : 1)} sur l’exercice.</p> : null}
         {helpBox}
       </div>
 
@@ -532,6 +562,61 @@ function PhaseStep({ step, first, anim, onDone }: { step: Extract<Step, { type: 
         )}
         <button type="button" className="button ghost" onClick={onDone}>
           Phase suivante
+        </button>
+      </div>
+    </>
+  );
+}
+
+/** Choix de la charge pour un exercice : gardé pour toutes les séries de la séance. */
+function LoadPicker({ equip, value, onChange }: { equip: Equip; value?: string; onChange: (load: string) => void }) {
+  return (
+    <div className="load-picker">
+      <span className="stepper-label">{EQUIP_LABEL[equip]}</span>
+      <div className="load-chips" role="group" aria-label={`Charge : ${EQUIP_LABEL[equip]}`}>
+        {LOADS[equip].map((load) => (
+          <button key={load} type="button" aria-pressed={value === load} onClick={() => onChange(load)}>
+            {load}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Étape de test : on saisit le meilleur résultat, enregistré avec la séance. */
+function TestStep({ step, onDone }: { step: Extract<Step, { type: 'work' }>; onDone: (test?: { id: string; value: number }) => void }) {
+  const test = TEST_BY_ID[step.item.test ?? ''];
+  const exercise = EXERCISES[step.item.ex];
+  const [text, setText] = useState('');
+  if (!test) return null;
+  const input = TEST_INPUT[test.unit];
+  const value = parseTest(test, text);
+  return (
+    <>
+      <div className="stage">
+        <Figure anim={exercise.anim} playing label={`Démonstration : ${exercise.name}`} />
+      </div>
+      <div className="player-body">
+        <p className="overline">{step.block}</p>
+        <h1>{test.name}</h1>
+        <p className="target">{step.item.label}</p>
+        <ol className="steps compact">
+          {exercise.steps.map((t) => (
+            <li key={t}>{t}</li>
+          ))}
+        </ol>
+        <label className="field">
+          <span>{input.label}</span>
+          <input inputMode={input.mode} placeholder={input.placeholder} value={text} onChange={(e) => setText(e.target.value)} />
+        </label>
+      </div>
+      <div className="player-actions">
+        <button type="button" className="button primary" disabled={value === null} onClick={() => value !== null && onDone({ id: test.id, value })}>
+          Enregistrer {value !== null ? formatTest(test, value) : 'le résultat'}
+        </button>
+        <button type="button" className="button ghost" onClick={() => onDone()}>
+          Passer ce test
         </button>
       </div>
     </>
