@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { ATHLETE, findSession, PROGRAM_START, sessionsFor, SPEED_PER_WEEK, weekInfo } from '../data/programme';
-import { addDays, capitalize, dayAndMonth, dayNumber, diffDays, mondayOf, todayKey, weekday, WEEKDAY_INITIALS, WEEKDAY_NAMES, weekdayName } from '../lib/dates';
+import { useEffect, useState, type CSSProperties } from 'react';
+import { Figure } from '../components/Figure';
+import { ATHLETE, exerciseCount, KIND_LABEL, sessionsFor, SPEED_PER_WEEK, weekInfo, type Session } from '../data/programme';
+import { addDays, capitalize, dayAndMonth, mondayOf, todayKey, weekday, weekdayName } from '../lib/dates';
 import { go, href } from '../lib/router';
-import { BED_TARGET, dayCount, formatHours, formatKg, nightMinutes, SLEEP_ID, speedCount, streaks, WAKE_TARGET, WEIGHT_GOAL, WEIGHT_ID, weights } from '../lib/stats';
+import { BED_TARGET, formatHours, formatKg, nightMinutes, SLEEP_ID, speedCount, WAKE_TARGET, WEIGHT_GOAL, WEIGHT_ID, weights } from '../lib/stats';
 import { getEntry, updateEntry, useStore, type Entries } from '../lib/store';
-import { Icon, kindStyle, Ring, SessionCard } from '../ui';
+import { Icon, kindStyle } from '../ui';
 import { resumableSession } from './Player';
 
 function greeting() {
@@ -14,13 +15,7 @@ function greeting() {
   return 'Bonsoir';
 }
 
-function headline(done: number, planned: number) {
-  if (planned === 0) return 'Journée de repos';
-  if (done === 0) return 'La journée commence';
-  if (done === planned) return 'Journée complète';
-  const left = planned - done;
-  return left === 1 ? 'Plus qu’une séance' : `Encore ${left} séances`;
-}
+const guided = (s: Session) => Boolean(s.phases) || exerciseCount(s) > 0;
 
 export function Today() {
   const { entries } = useStore();
@@ -28,19 +23,17 @@ export function Today() {
   const info = weekInfo(today);
   const monday = mondayOf(today);
   const sessions = sessionsFor(today);
-  const count = dayCount(entries, today);
-  const streak = streaks(entries);
   const resumable = resumableSession(today);
-  const todo = sessions.filter((s) => !getEntry(entries, today, s.id).done);
-  const done = sessions.filter((s) => getEntry(entries, today, s.id).done);
-  const speed = speedCount(entries, monday);
-  const speedToday = getEntry(entries, today, 'vitesse').done;
+  const [sheet, setSheet] = useState(false);
+  const isDone = (s: Session) => getEntry(entries, today, s.id).done;
+  // La séance mise en avant : la première séance d'entraînement pas encore faite, sinon ce qui reste.
+  const main = sessions.find((s) => s.kind !== 'mobilite' && !isDone(s)) ?? sessions.find((s) => !isDone(s));
+  const others = sessions.filter((s) => s !== main);
   const wd = weekday(today);
-  const weekWeights = weights(entries).filter((p) => p.day >= monday);
-  const showWeight = info.started && weekWeights.length === 0;
-  const showSleep = !getEntry(entries, today, SLEEP_ID).data.wake && new Date().getHours() >= 5;
   const bilanMonday = wd === 6 ? monday : wd === 0 ? addDays(monday, -7) : null;
   const showBilan = bilanMonday !== null && weekInfo(bilanMonday).started;
+  const todo = quickTodo(entries, today);
+  const count = main ? exerciseCount(main) : 0;
 
   return (
     <main className="screen">
@@ -58,222 +51,227 @@ export function Today() {
         </a>
       </header>
 
-      {showSleep && <SleepCard day={today} />}
-
-      {!info.started ? (
-        <BeforeStart today={today} />
+      <p className="eyebrow">{main ? (main.kind === 'mobilite' ? 'À faire' : 'Séance du jour') : 'Aujourd’hui'}</p>
+      {main ? (
+        <section className="hero-card" style={kindStyle(main.kind)}>
+          <a className="hero-figure" href={href('seance', today, main.id)} aria-label={`Voir le détail : ${main.title}`}>
+            <Figure anim={main.anim} playing label="" />
+          </a>
+          <p className="hero-kind">
+            {KIND_LABEL[main.kind]}
+            {info.started && main.kind !== 'mobilite' ? ` · ${info.bloc.name}, semaine ${info.w + 1}` : ''}
+            {info.light && main.kind !== 'mobilite' ? ' · tests' : ''}
+          </p>
+          <h2 className="hero-name">{main.title}</h2>
+          <p className="hero-meta">
+            {main.minutes} min
+            {count > 0 ? ` · ${count} exercice${count > 1 ? 's' : ''}` : ''}
+          </p>
+          <button type="button" className="button primary big" onClick={() => (guided(main) ? go('go', today, main.id) : go('seance', today, main.id))}>
+            <Icon name="play" size={18} />
+            {resumable === main.id ? 'Reprendre' : guided(main) ? 'Démarrer' : 'Ouvrir'}
+          </button>
+          <a className="hero-more" href={href('seance', today, main.id)}>
+            Voir le détail
+          </a>
+        </section>
       ) : (
-        <>
-          <section className="hero">
-            <Ring value={count.planned ? count.done / count.planned : 0} size={124} stroke={12} label={`${count.done} séances faites sur ${count.planned}`}>
-              <span className="ring-big">
-                {count.done}
-                <span className="ring-small">/{count.planned}</span>
-              </span>
-            </Ring>
-            <div className="hero-text">
-              <h2 className="hero-title">{headline(count.done, count.planned)}</h2>
-              <p className="muted">
-                {info.bloc.name}, semaine {info.w + 1} sur {info.bloc.weeks}
-              </p>
-              <div className="chips">
-                <span className="chip">
-                  <Icon name="flame" size={16} />
-                  {streak.current} jour{streak.current > 1 ? 's' : ''} d’affilée
-                </span>
-                {info.light && <span className="chip is-accent">Semaine allégée et tests</span>}
-              </div>
-            </div>
-          </section>
-
-          {showWeight && <WeightCard day={today} entries={entries} monday={wd === 0} />}
-
-          {showBilan && bilanMonday && (
-            <a className="callout bilan-callout" href={href('bilan', bilanMonday)}>
-              <span className="callout-title">{wd === 6 ? 'Le bilan de ta semaine est prêt' : 'Le bilan de la semaine dernière'}</span>
-              <span className="muted">Régularité, sommeil, poids, progrès, et les ajustements à valider pour la suite.</span>
-            </a>
-          )}
-
-          {todo.length > 0 && (
-            <>
-              <h2 className="section-title">À faire aujourd’hui</h2>
-              <div className="stack">
-                {todo.map((session) => (
-                  <SessionCard key={session.id} day={today} session={session} entry={getEntry(entries, today, session.id)} resume={resumable === session.id} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {done.length > 0 && (
-            <>
-              <h2 className="section-title">Déjà fait</h2>
-              <div className="stack">
-                {done.map((session) => (
-                  <SessionCard key={session.id} day={today} session={session} entry={getEntry(entries, today, session.id)} />
-                ))}
-              </div>
-            </>
-          )}
-
-          <h2 className="section-title">Vitesse de swing</h2>
-          <section className="panel speed-panel" style={kindStyle('vitesse')}>
-            <div className="speed-head">
-              <div>
-                <p className="speed-count num">
-                  {speed}
-                  <span className="ring-small">/{SPEED_PER_WEEK}</span>
-                </p>
-                <p className="muted small">séances cette semaine, au practice</p>
-              </div>
-              <div className="speed-dots" aria-hidden="true">
-                {Array.from({ length: SPEED_PER_WEEK }, (_, i) => (
-                  <span key={i} className={i < speed ? 'is-done' : ''} />
-                ))}
-              </div>
-            </div>
-            <button type="button" className={speedToday ? 'button ghost' : 'button'} onClick={() => go('seance', today, 'vitesse')}>
-              <Icon name="golf" size={20} />
-              {speedToday ? 'Voir la séance du jour' : 'Je suis au practice'}
-            </button>
-          </section>
-
-          <div className="section-head">
-            <h2 className="section-title">Cette semaine</h2>
-            <a className="text-link" href={href('programme')}>
-              Voir le programme
-            </a>
-          </div>
-          <section className="panel">
-            <div className="week-strip">
-              {Array.from({ length: 7 }, (_, i) => {
-                const day = addDays(monday, i);
-                const c = dayCount(entries, day);
-                return (
-                  <a key={day} className={`week-day${day === today ? ' is-today' : ''}`} href={href('programme', day)} aria-label={`${WEEKDAY_NAMES[i]} ${dayNumber(day)} : ${c.done} sur ${c.planned}`}>
-                    <span className="week-initial">{WEEKDAY_INITIALS[i]}</span>
-                    <Ring value={day > today || !c.planned ? 0 : c.done / c.planned} size={34} stroke={4} label="">
-                      <span className="week-num">{dayNumber(day)}</span>
-                    </Ring>
-                  </a>
-                );
-              })}
-            </div>
-          </section>
-        </>
+        <section className="hero-card is-complete">
+          <span className="complete-badge">
+            <Icon name="check" size={28} />
+          </span>
+          <h2 className="hero-name">{sessions.length ? 'Journée complète' : 'Journée de repos'}</h2>
+          <p className="hero-meta">{sessions.length ? 'Tout est fait. Bon golf cet après-midi.' : 'Récupère, et profite du golf.'}</p>
+        </section>
       )}
+
+      {others.length > 0 && (
+        <ul className="mini-list">
+          {others.map((s) => {
+            const done = isDone(s);
+            return (
+              <li key={s.id}>
+                <a href={href('seance', today, s.id)} className={done ? 'is-done' : ''} style={kindStyle(s.kind)}>
+                  <span className="mini-check">{done ? <Icon name="check" size={16} /> : null}</span>
+                  <span className="mini-title">{s.title}</span>
+                  <span className="mini-meta">{s.minutes} min</span>
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {showBilan && bilanMonday && (
+        <a className="row-link" href={href('bilan', bilanMonday)}>
+          <span className="row-text">
+            <span className="row-title">{wd === 6 ? 'Ton bilan de la semaine' : 'Le bilan de la semaine dernière'}</span>
+            <span className="row-sub">Régularité, sommeil, poids et ajustements</span>
+          </span>
+          <Icon name="next" size={18} />
+        </a>
+      )}
+
+      <button type="button" className="fab" onClick={() => setSheet(true)} aria-label={`Noter ma nuit, mon poids ou ma vitesse${todo > 0 ? ` (${todo} à faire)` : ''}`}>
+        <Icon name="plus" size={26} />
+        {todo > 0 && <span className="fab-dot" aria-hidden="true" />}
+      </button>
+
+      {sheet && <QuickSheet day={today} monday={monday} entries={entries} started={info.started} onClose={() => setSheet(false)} />}
     </main>
   );
 }
 
-function BeforeStart({ today }: { today: string }) {
-  const days = diffDays(today, PROGRAM_START);
-  const first = findSession(PROGRAM_START, 'bas-a');
+function quickTodo(entries: Entries, day: string) {
+  const monday = mondayOf(day);
+  let n = 0;
+  if (!getEntry(entries, day, SLEEP_ID).data.wake) n++;
+  if (weekInfo(day).started && weights(entries).every((p) => p.day < monday)) n++;
+  return n;
+}
+
+type Panel = 'menu' | 'nuit' | 'poids';
+
+const qStyle = (color: string) => ({ '--q': `var(--${color})` }) as CSSProperties;
+
+function QuickSheet({ day, monday, entries, started, onClose }: { day: string; monday: string; entries: Entries; started: boolean; onClose: () => void }) {
+  const [panel, setPanel] = useState<Panel>('menu');
+  const sleep = getEntry(entries, day, SLEEP_ID);
+  const all = weights(entries);
+  const last = all[all.length - 1];
+  const weighed = all.some((p) => p.day >= monday);
+  const speed = speedCount(entries, monday);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   return (
-    <section className="panel start-panel">
-      <p className="overline">Nouveau programme</p>
-      <p className="big-number num">J-{days}</p>
-      <p>
-        Le programme démarre le <strong>lundi 30 novembre</strong> avec le bloc Fondations. Première séance : {first?.title}.
-      </p>
-      <p className="muted small">Cette semaine sert aux tests de départ. Note tes résultats dans Progrès, puis Tests : ils serviront de point de comparaison.</p>
-      <a className="button" href={href('progres', 'tests')}>
-        Noter mes tests
-      </a>
-    </section>
+    <div className="sheet-wrap">
+      <button type="button" className="sheet-backdrop" aria-label="Fermer" onClick={onClose} />
+      <div className="sheet" role="dialog" aria-modal="true" aria-label="Noter">
+        <span className="sheet-grip" aria-hidden="true" />
+        {panel === 'menu' && (
+          <>
+            <p className="sheet-title">Noter</p>
+            <button type="button" className="quick-row" style={qStyle('nuit')} onClick={() => setPanel('nuit')}>
+              <span className="quick-icon">
+                <Icon name="moon" />
+              </span>
+              <span className="quick-text">
+                <span className="quick-name">Ma nuit</span>
+                <span className="quick-sub">{sleep.data.wake ? `${formatHours(nightMinutes(sleep.data.bed ?? BED_TARGET, sleep.data.wake))}, notée` : 'Couché à minuit, levé à 8 h ?'}</span>
+              </span>
+              {!sleep.data.wake && <span className="quick-tag">À faire</span>}
+            </button>
+            <button type="button" className="quick-row" style={qStyle('poids')} onClick={() => setPanel('poids')}>
+              <span className="quick-icon">
+                <Icon name="scale" />
+              </span>
+              <span className="quick-text">
+                <span className="quick-name">Mon poids</span>
+                <span className="quick-sub">{last ? `Dernier : ${formatKg(last.value)}, objectif ${WEIGHT_GOAL} kg` : `Objectif ${WEIGHT_GOAL} kg en mars`}</span>
+              </span>
+              {started && !weighed && <span className="quick-tag">Cette semaine</span>}
+            </button>
+            <button type="button" className="quick-row" style={qStyle('vitesse')} onClick={() => go('seance', day, 'vitesse')}>
+              <span className="quick-icon">
+                <Icon name="golf" />
+              </span>
+              <span className="quick-text">
+                <span className="quick-name">Vitesse de swing</span>
+                <span className="quick-sub">
+                  Au practice · {speed} sur {SPEED_PER_WEEK} cette semaine
+                </span>
+              </span>
+            </button>
+            <button type="button" className="button ghost" onClick={onClose}>
+              Fermer
+            </button>
+          </>
+        )}
+        {panel === 'nuit' && <SleepForm day={day} onDone={onClose} onBack={() => setPanel('menu')} />}
+        {panel === 'poids' && <WeightForm day={day} onDone={onClose} onBack={() => setPanel('menu')} />}
+      </div>
+    </div>
   );
 }
 
 const TIME_RE = /^\d{2}:\d{2}$/;
 
-function SleepCard({ day }: { day: string }) {
-  const [editing, setEditing] = useState(false);
-  const [bed, setBed] = useState(BED_TARGET);
-  const [wake, setWake] = useState(WAKE_TARGET);
-  const save = (b: string, w: string) => {
-    if (!TIME_RE.test(b) || !TIME_RE.test(w)) return;
-    updateEntry(day, SLEEP_ID, { done: true, data: { bed: b, wake: w } });
-  };
+function SheetHead({ title, onBack }: { title: string; onBack: () => void }) {
   return (
-    <section className="panel sleep-card">
-      <p className="panel-head">
-        <span className="with-icon">
-          <Icon name="moon" size={18} />
-          Ta nuit
-        </span>
-        {!editing && <span className="num">{formatHours(nightMinutes(bed, wake))}</span>}
-      </p>
-      {editing ? (
-        <>
-          <div className="field-row">
-            <label className="field">
-              <span>Couché à</span>
-              <input type="time" value={bed} onChange={(e) => setBed(e.target.value)} />
-            </label>
-            <label className="field">
-              <span>Levé à</span>
-              <input type="time" value={wake} onChange={(e) => setWake(e.target.value)} />
-            </label>
-          </div>
-          <p className="muted small">{TIME_RE.test(bed) && TIME_RE.test(wake) ? `${formatHours(nightMinutes(bed, wake))} de sommeil.` : 'Indique les deux heures.'}</p>
-          <button type="button" className="button primary" onClick={() => save(bed, wake)}>
-            Enregistrer
-          </button>
-        </>
-      ) : (
-        <>
-          <p className="muted">
-            Couché à minuit, levé à 8 h, comme prévu ?
-          </p>
-          <div className="player-actions is-row">
-            <button type="button" className="button ghost" onClick={() => setEditing(true)}>
-              Corriger
-            </button>
-            <button type="button" className="button primary" onClick={() => save(BED_TARGET, WAKE_TARGET)}>
-              Oui, c’est ça
-            </button>
-          </div>
-        </>
-      )}
-    </section>
+    <div className="sheet-head">
+      <button type="button" className="icon-button" onClick={onBack} aria-label="Retour">
+        <Icon name="back" />
+      </button>
+      <p className="sheet-title">{title}</p>
+    </div>
   );
 }
 
-function WeightCard({ day, entries, monday }: { day: string; entries: Entries; monday: boolean }) {
+function SleepForm({ day, onDone, onBack }: { day: string; onDone: () => void; onBack: () => void }) {
+  const [bed, setBed] = useState(BED_TARGET);
+  const [wake, setWake] = useState(WAKE_TARGET);
+  const valid = TIME_RE.test(bed) && TIME_RE.test(wake);
+  const save = (b: string, w: string) => {
+    updateEntry(day, SLEEP_ID, { done: true, data: { bed: b, wake: w } });
+    onDone();
+  };
+  return (
+    <>
+      <SheetHead title="Ma nuit" onBack={onBack} />
+      <button type="button" className="button primary big" onClick={() => save(BED_TARGET, WAKE_TARGET)}>
+        Minuit, 8 h : c’est ça
+      </button>
+      <p className="sheet-or">ou corrige les heures</p>
+      <div className="field-row">
+        <label className="field">
+          <span>Couché à</span>
+          <input type="time" value={bed} onChange={(e) => setBed(e.target.value)} />
+        </label>
+        <label className="field">
+          <span>Levé à</span>
+          <input type="time" value={wake} onChange={(e) => setWake(e.target.value)} />
+        </label>
+      </div>
+      <button type="button" className="button" disabled={!valid} onClick={() => save(bed, wake)}>
+        Enregistrer {valid ? formatHours(nightMinutes(bed, wake)) : ''}
+      </button>
+    </>
+  );
+}
+
+function WeightForm({ day, onDone, onBack }: { day: string; onDone: () => void; onBack: () => void }) {
   const [text, setText] = useState('');
   const value = Number(text.replace(',', '.'));
   const valid = text.trim() !== '' && Number.isFinite(value) && value > 30 && value < 200;
-  const all = weights(entries);
-  const last = all[all.length - 1];
   return (
-    <section className="panel weight-card">
-      <p className="panel-head">
-        <span className="with-icon">
-          <Icon name="scale" size={18} />
-          {monday ? 'Pesée du lundi' : 'Pesée de la semaine'}
-        </span>
-        {last && <span className="muted small">Dernière : {formatKg(last.value)}</span>}
-      </p>
-      <p className="muted small">Le matin, à jeun, après être passé aux toilettes. Objectif : {WEIGHT_GOAL} kg en mars.</p>
+    <>
+      <SheetHead title="Mon poids" onBack={onBack} />
+      <p className="muted small">Le matin, à jeun, une fois par semaine, le lundi idéalement.</p>
       <div className="inline-form">
         <label className="field">
           <span className="sr-only">Poids en kg</span>
           <input inputMode="decimal" placeholder="66,4" value={text} onChange={(e) => setText(e.target.value)} />
         </label>
         <span className="unit">kg</span>
-        <button
-          type="button"
-          className="button primary"
-          disabled={!valid}
-          onClick={() => {
-            updateEntry(day, WEIGHT_ID, { done: true, data: { value: Math.round(value * 10) / 10 } });
-            setText('');
-          }}
-        >
-          Enregistrer
-        </button>
       </div>
-    </section>
+      <button
+        type="button"
+        className="button primary big"
+        disabled={!valid}
+        onClick={() => {
+          updateEntry(day, WEIGHT_ID, { done: true, data: { value: Math.round(value * 10) / 10 } });
+          onDone();
+        }}
+      >
+        Enregistrer
+      </button>
+    </>
   );
 }

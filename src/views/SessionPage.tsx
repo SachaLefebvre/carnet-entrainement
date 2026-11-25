@@ -18,6 +18,7 @@ export function SessionPage({ day, id }: { day: string; id: string }) {
   const entry = getEntry(entries, day, id);
   const [km, setKm] = useState(entry.data.distanceKm ? String(entry.data.distanceKm).replace('.', ',') : '');
   const [time, setTime] = useState(entry.data.timeSec ? formatClock(entry.data.timeSec) : '');
+  const [open, setOpen] = useState<number[]>([]);
 
   if (!session) {
     return (
@@ -65,29 +66,15 @@ export function SessionPage({ day, id }: { day: string; id: string }) {
           {KIND_LABEL[session.kind]}
         </p>
         <h1>{session.title}</h1>
-        <div className="chips">
-          <span className="chip">
-            <Icon name="clock" size={16} />
-            {session.minutes} min
-          </span>
-          {count > 0 && (
-            <span className="chip">
-              {count} exercice{count > 1 ? 's' : ''}
-            </span>
-          )}
-          {contacts > 0 && (
-            <span className="chip">
-              <Icon name="bolt" size={16} />
-              {contacts} contacts au sol
-            </span>
-          )}
+        <p className="cover-meta">
+          {[`${session.minutes} min`, count > 0 ? `${count} exercice${count > 1 ? 's' : ''}` : '', contacts > 0 ? `${contacts} sauts` : ''].filter(Boolean).join(' · ')}
           {entry.done && (
-            <span className="chip is-done">
-              <Icon name="check" size={16} />
+            <span className="done-pill">
+              <Icon name="check" size={14} />
               Faite
             </span>
           )}
-        </div>
+        </p>
       </section>
 
       <p className="lead">{session.intro}</p>
@@ -137,30 +124,50 @@ export function SessionPage({ day, id }: { day: string; id: string }) {
         </section>
       )}
 
-      {session.blocks.map((block) => (
-        <section key={block.title}>
-          <h2 className="section-title">{block.title}</h2>
-          <div className="stack tight">
-            {block.items.map((item, i) => {
-              const exercise = EXERCISES[item.ex];
-              const load = item.equip ? lastLoad(entries, item.ex, item.adjustKey) : undefined;
-              return (
-                <a key={`${item.ex}-${i}`} className="exercise-row" href={href('exercice', item.ex)}>
-                  <div className="exercise-thumb">
-                    <Figure anim={exercise.anim} label="" />
+      {session.blocks.length > 0 && (
+        <div className="blocks">
+          {session.blocks.map((block, b) => {
+            const isOpen = open.includes(b);
+            return (
+              <section key={block.title} className={`block${isOpen ? ' is-open' : ''}`}>
+                <h2 className="block-head-wrap">
+                  <button type="button" className="block-head" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? open.filter((x) => x !== b) : [...open, b])}>
+                    <span className="block-index num">{b + 1}</span>
+                    <span className="block-title">{block.title}</span>
+                    <span className="block-count">
+                      {block.display ? '' : `${block.items.length} exercice${block.items.length > 1 ? 's' : ''}`}
+                    </span>
+                    <span className="block-chevron">
+                      <Icon name="next" size={18} />
+                    </span>
+                  </button>
+                </h2>
+                {isOpen && (
+                  <div className="block-items">
+                    {block.items.map((item, i) => {
+                      const exercise = EXERCISES[item.ex];
+                      const load = item.equip ? lastLoad(entries, item.ex, item.adjustKey) : undefined;
+                      return (
+                        <a key={`${item.ex}-${i}`} className="exercise-row" href={href('exercice', item.ex)}>
+                          <div className="exercise-thumb">
+                            <Figure anim={exercise.anim} label="" />
+                          </div>
+                          <div className="exercise-text">
+                            <span className="exercise-name">{item.label ?? exercise.name}</span>
+                            {item.note && <span className="exercise-note">{item.note}</span>}
+                            {load && <span className="exercise-note">Dernière charge : {load}</span>}
+                          </div>
+                          <span className="exercise-dose num">{dose(item)}</span>
+                        </a>
+                      );
+                    })}
                   </div>
-                  <div className="exercise-text">
-                    <span className="exercise-name">{exercise.name}</span>
-                    {item.note && <span className="exercise-note">{item.note}</span>}
-                    {load && <span className="exercise-note">Dernière charge : {load}</span>}
-                  </div>
-                  <span className="exercise-dose num">{dose(item)}</span>
-                </a>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+                )}
+              </section>
+            );
+          })}
+        </div>
+      )}
 
       <label className="field note-field">
         <span>Note</span>
@@ -186,7 +193,7 @@ export function SessionPage({ day, id }: { day: string; id: string }) {
               </button>
             )}
             <button type="button" className={guided ? 'button ghost' : 'button primary'} onClick={() => updateEntry(day, id, { done: true })}>
-              {guided ? 'Marquer comme faite sans le mode guidé' : 'Marquer comme faite'}
+              {guided ? 'Déjà faite, la valider' : 'Marquer comme faite'}
             </button>
           </>
         )}

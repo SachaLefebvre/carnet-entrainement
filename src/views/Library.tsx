@@ -5,7 +5,7 @@ import { capitalize, dayAndMonth, weekdayName } from '../lib/dates';
 import { href } from '../lib/router';
 import { exerciseHistory } from '../lib/stats';
 import { useStore } from '../lib/store';
-import { TopBar } from '../ui';
+import { Icon, TopBar } from '../ui';
 
 type Filter = Category | 'tout';
 
@@ -19,7 +19,6 @@ export function Library() {
     <main className="screen">
       <header className="page-head">
         <div>
-          <p className="overline">{EXERCISE_LIST.length} mouvements illustrés</p>
           <h1>Exercices</h1>
         </div>
       </header>
@@ -43,17 +42,28 @@ export function Library() {
       {shown.length === 0 ? (
         <p className="muted">Aucun exercice ne correspond. Essaie un autre mot ou une autre catégorie.</p>
       ) : (
-        <div className="grid">
-          {shown.map((exercise) => (
-            <a key={exercise.id} className="tile" href={href('exercice', exercise.id)}>
-              <div className="tile-figure">
-                <Figure anim={exercise.anim} label="" />
-              </div>
-              <span className="tile-name">{exercise.name}</span>
-              <span className="tile-cat">{CATEGORY_LABEL[exercise.cat]}</span>
-            </a>
-          ))}
-        </div>
+        (filter === 'tout' ? CATEGORIES : [filter]).map((cat) => {
+          const list = shown.filter((e) => e.cat === cat);
+          if (list.length === 0) return null;
+          return (
+            <section key={cat}>
+              <p className="eyebrow">{CATEGORY_LABEL[cat]}</p>
+              <ul className="lib-list">
+                {list.map((exercise) => (
+                  <li key={exercise.id}>
+                    <a className="lib-row" href={href('exercice', exercise.id)}>
+                      <span className="lib-thumb">
+                        <Figure anim={exercise.anim} label="" />
+                      </span>
+                      <span className="lib-name">{exercise.name}</span>
+                      <Icon name="next" size={18} />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          );
+        })
       )}
     </main>
   );

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Figure } from '../components/Figure';
-import { KINDS, KIND_LABEL, PROGRAM_START, SEASON_START, TESTS, type TestDef } from '../data/programme';
+import { KINDS, KIND_LABEL, PROGRAM_START, sessionsFor, SEASON_START, TESTS, type TestDef } from '../data/programme';
 import { addDays, capitalize, dayAndMonth, mondayOf, shortDate, todayKey, WEEKDAY_INITIALS, weekdayName, weekRange } from '../lib/dates';
 import { speedUnit } from '../lib/prefs';
 import { go, href, replace } from '../lib/router';
@@ -42,14 +42,119 @@ import {
   weights,
   type TestResult,
 } from '../lib/stats';
-import { updateEntry, useStore, type Entries } from '../lib/store';
-import { Chart, Icon, kindStyle, Segmented } from '../ui';
+import { getEntry, updateEntry, useStore, type Entries } from '../lib/store';
+import { Chart, Icon, kindStyle, Segmented, TopBar } from '../ui';
+
+/** La page d'accueil de Progrès : l'essentiel en un coup d'œil, le détail un niveau plus bas. */
+function Summary({ entries }: { entries: Entries }) {
+  const today = todayKey();
+  const monday = mondayOf(today);
+  const unit = speedUnit();
+  const maxes = swingMax(entries);
+  const lastSpeed = maxes[maxes.length - 1];
+  const bestSpeed = maxes.reduce<number | null>((m, p) => (m === null || p.value > m ? p.value : m), null);
+  const ws = weights(entries);
+  const lastWeight = ws[ws.length - 1];
+  // Les séances d'entraînement de la semaine, sans la mobilité du matin.
+  const week = { done: 0, planned: 0 };
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(monday, i);
+    for (const s of sessionsFor(d)) {
+      if (s.kind === 'mobilite') continue;
+      week.planned++;
+      if (getEntry(entries, d, s.id).done) week.done++;
+    }
+  }
+  const shownTests = TESTS.filter((t) => ['tractions', 'pompes', 'detente', 'cinq-km'].includes(t.id));
+  const details: { id: Tab; title: string; sub: string; icon: 'stats' | 'calendar' | 'scale' | 'golf' | 'check' }[] = [
+    { id: 'tests', title: 'Tous les tests', sub: 'Historique, records, saisie à une date', icon: 'check' },
+    { id: 'golf', title: 'Vitesse de swing', sub: 'Courbe de la vitesse max et moyenne', icon: 'golf' },
+    { id: 'corps', title: 'Poids et sommeil', sub: 'Courbes et régularité des nuits', icon: 'scale' },
+    { id: 'vue', title: 'Séances', sub: 'Régularité, semaines, bilan à copier', icon: 'stats' },
+    { id: 'journal', title: 'Journal', sub: 'Toutes les séances faites et tes notes', icon: 'calendar' },
+  ];
+  return (
+    <main className="screen">
+      <header className="page-head">
+        <div>
+          <p className="overline">Depuis le {dayAndMonth(PROGRAM_START)}</p>
+          <h1>Progrès</h1>
+        </div>
+      </header>
+
+      <a className="stat-hero" href={href('progres', 'golf')} style={kindStyle('vitesse')}>
+        <span className="stat-label">Vitesse de club au driver</span>
+        <span className="stat-big num">
+          {lastSpeed ? lastSpeed.value : '–'}
+          <span className="stat-unit"> {unit}</span>
+        </span>
+        <span className="stat-sub">{lastSpeed ? `Record : ${bestSpeed} ${unit}` : 'Note ta première séance au practice avec le bouton +'}</span>
+      </a>
+
+      <div className="stat-pair">
+        <a className="stat-card" href={href('progres', 'corps')} style={{ '--k': 'var(--poids)' } as CSSProperties}>
+          <span className="stat-label">Poids</span>
+          <span className="stat-mid num">
+            {lastWeight ? lastWeight.value.toLocaleString('fr-FR') : WEIGHT_START}
+            <span className="stat-unit"> kg</span>
+          </span>
+          <span className="stat-sub">Objectif {WEIGHT_GOAL} kg</span>
+        </a>
+        <a className="stat-card" href={href('progres', 'vue')} style={{ '--k': 'var(--accent)' } as CSSProperties}>
+          <span className="stat-label">Cette semaine</span>
+          <span className="stat-mid num">
+            {week.done}
+            <span className="stat-unit"> / {week.planned}</span>
+          </span>
+          <span className="stat-sub">séances faites</span>
+        </a>
+      </div>
+
+      <div className="section-head">
+        <p className="eyebrow">Tests</p>
+        <a className="text-link" href={href('progres', 'tests')}>
+          Tout voir
+        </a>
+      </div>
+      <ul className="value-list">
+        {shownTests.map((test) => {
+          const results = testHistory(entries, test.id);
+          const last = results[results.length - 1];
+          return (
+            <li key={test.id}>
+              <span>{test.name}</span>
+              {last ? <strong className="num">{formatTest(test, last.value)}</strong> : <span className="muted">à faire</span>}
+            </li>
+          );
+        })}
+      </ul>
+
+      <p className="eyebrow">En détail</p>
+      <ul className="link-list">
+        {details.map((d) => (
+          <li key={d.id}>
+            <a href={href('progres', d.id)}>
+              <span className="row-icon">
+                <Icon name={d.icon} size={20} />
+              </span>
+              <span className="row-text">
+                <span className="row-title">{d.title}</span>
+                <span className="row-sub">{d.sub}</span>
+              </span>
+              <Icon name="next" size={18} />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
+}
 
 type Tab = 'vue' | 'tests' | 'corps' | 'golf' | 'journal';
 type Period = '7' | '28' | 'all';
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'vue', label: 'Vue' },
+  { id: 'vue', label: 'Séances' },
   { id: 'tests', label: 'Tests' },
   { id: 'corps', label: 'Corps' },
   { id: 'golf', label: 'Swing' },
@@ -66,16 +171,12 @@ const dateLabel = (day: string) => shortDate(day);
 
 export function Stats({ tab: routeTab }: { tab?: string }) {
   const { entries } = useStore();
+  if (!routeTab) return <Summary entries={entries} />;
   const tab: Tab = TABS.some((t) => t.id === routeTab) ? (routeTab as Tab) : 'vue';
 
   return (
     <main className="screen">
-      <header className="page-head">
-        <div>
-          <p className="overline">Jour {daysSinceStart(entries)} du suivi</p>
-          <h1>Progrès</h1>
-        </div>
-      </header>
+      <TopBar title="Progrès en détail" fallback={['progres']} />
       <Segmented options={TABS} value={tab} onChange={(next) => replace('progres', next)} label="Rubrique" />
       {tab === 'vue' && <Overview entries={entries} />}
       {tab === 'tests' && <Tests entries={entries} />}

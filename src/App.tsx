@@ -19,7 +19,7 @@ const TABS = [
   { route: '', label: 'Aujourd’hui', icon: 'home' },
   { route: 'programme', label: 'Programme', icon: 'calendar' },
   { route: 'progres', label: 'Progrès', icon: 'stats' },
-  { route: 'exercices', label: 'Bibliothèque', icon: 'library' },
+  { route: 'exercices', label: 'Exercices', icon: 'library' },
 ] as const;
 
 const STATUS_TEXT: Record<SyncStatus, string> = {

@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { blocStarts, dayOfSession, findSession, legConflicts, MOVABLE, MOVE_KEY, movesFor, PROGRAM_START, SCHEDULE, SPEED_PER_WEEK, weekInfo } from '../data/programme';
-import { addDays, capitalize, dayAndMonth, mondayOf, shortDate, todayKey, WEEKDAY_INITIALS, WEEKDAY_NAMES, weekRange } from '../lib/dates';
-import { go, replace } from '../lib/router';
-import { dayCount, speedCount } from '../lib/stats';
+import { addDays, dayAndMonth, dayNumber, mondayOf, todayKey, WEEKDAY_INITIALS, WEEKDAY_NAMES, weekRange } from '../lib/dates';
+import { go, href, replace } from '../lib/router';
+import { speedCount } from '../lib/stats';
 import { getEntry, updateEntry, useStore } from '../lib/store';
-import { Icon, kindStyle, SessionCard } from '../ui';
+import { Icon, kindStyle } from '../ui';
+
+const DAY_ABBR = ['LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM', 'DIM'];
 
 export function Programme({ day: routeDay }: { day?: string }) {
   const { entries } = useStore();
@@ -17,6 +19,7 @@ export function Programme({ day: routeDay }: { day?: string }) {
   const moves = movesFor(monday);
   const conflicts = info.started ? legConflicts(monday) : [];
   const speed = speedCount(entries, monday);
+  const thisWeek = monday === mondayOf(today);
 
   const setDay = (next: string) => {
     setDayState(next);
@@ -37,142 +40,146 @@ export function Programme({ day: routeDay }: { day?: string }) {
     <main className="screen">
       <header className="page-head">
         <div>
-          <p className="overline">{info.started ? `${info.bloc.name}, semaine ${info.w + 1} sur ${info.bloc.weeks}` : 'Avant le programme'}</p>
+          <p className="overline">
+            {info.started ? `${info.bloc.name} · semaine ${info.w + 1} sur ${info.bloc.weeks}` : 'Avant le programme'}
+            {info.light ? ' · allégée' : ''}
+          </p>
           <h1>Programme</h1>
         </div>
         <div className="stepper">
-          <button type="button" className="icon-button" onClick={() => setDay(addDays(day, -7))} aria-label="Semaine précédente">
-            <Icon name="back" />
+          <button type="button" className="round-button" onClick={() => setDay(addDays(day, -7))} aria-label="Semaine précédente">
+            <Icon name="back" size={18} />
           </button>
-          <button type="button" className="icon-button" onClick={() => setDay(addDays(day, 7))} aria-label="Semaine suivante">
-            <Icon name="next" />
+          <button type="button" className="round-button" onClick={() => setDay(addDays(day, 7))} aria-label="Semaine suivante">
+            <Icon name="next" size={18} />
           </button>
         </div>
       </header>
 
-      <Timeline monday={monday} />
-
-      {info.started && (
-        <section className="panel">
-          <p className="panel-head">
-            Bloc {info.bloc.name}
-            {info.light && <span className="tag">allégée</span>}
-          </p>
-          <p className="muted">{info.bloc.focus}</p>
-          {info.light && <p className="small">Semaine de tests : ils sont intégrés au début de Bas A, Haut A et Haut B, et le 5 km remplace la course de samedi.</p>}
-        </section>
-      )}
+      <BlocBar monday={monday} />
 
       <div className="section-head">
-        <h2 className="section-title">Semaine {weekRange(monday)}</h2>
-        {monday !== mondayOf(today) && (
+        <p className="eyebrow">{weekRange(monday).replace(/^du /, '')}</p>
+        {!thisWeek && (
           <button type="button" className="text-link as-button" onClick={() => setDay(today)}>
-            Aujourd’hui
+            Cette semaine
           </button>
         )}
       </div>
 
       {!info.started ? (
-        <p className="muted">Semaine de tests de départ, hors application. Le programme commence le lundi {dayAndMonth(PROGRAM_START)}.</p>
+        <p className="muted">Le programme commence le lundi {dayAndMonth(PROGRAM_START)}.</p>
       ) : (
         <>
+          {info.light && <p className="hint">Semaine de tests : ils sont au début de Bas A, Haut A et Haut B, et le 5 km remplace la course du samedi.</p>}
           {conflicts.length > 0 && (
             <div className="callout warn-callout" role="status">
               <span className="callout-title">Deux séances de jambes trop proches</span>
-              <span className="muted">
-                {conflicts.join(' ; ')}. Laisse si possible un jour entre les deux pour que les jambes et les tibias récupèrent.
-              </span>
+              <span className="muted small">{conflicts.join(' ; ')}. Laisse si possible un jour entre les deux.</span>
             </div>
           )}
-          <p className="hint">Mobilité du matin tous les jours. Touche « Déplacer » pour changer une séance de jour cette semaine.</p>
-          <div className="days">
+
+          <ul className="day-list">
             {Array.from({ length: 7 }, (_, i) => {
               const d = addDays(monday, i);
               const ids = MOVABLE.filter((id) => dayOfSession(monday, id) === i);
-              const c = dayCount(entries, d);
-              return (
-                <section key={d} className={`day-group${d === today ? ' is-today' : ''}`}>
-                  <p className="day-head">
-                    <span>
-                      {WEEKDAY_NAMES[i]} {shortDate(d)}
-                    </span>
-                    <span className="muted num small">
-                      {c.done} sur {c.planned}
-                    </span>
-                  </p>
-                  {ids.length === 0 && <p className="muted small">Repos (mobilité seulement).</p>}
-                  {ids.map((id) => {
-                    const session = findSession(d, id);
-                    if (!session) return null;
-                    const entry = getEntry(entries, d, id);
-                    return (
-                      <div key={id} className="move-wrap">
-                        <SessionCard day={d} session={session} entry={entry} />
-                        {!entry.done && (
-                          <button type="button" className="text-link as-button move-button" aria-expanded={moving === id} onClick={() => setMoving(moving === id ? null : id)}>
-                            <Icon name="move" size={16} />
-                            {moves[id] !== undefined ? 'Déplacée, changer encore' : 'Déplacer'}
-                          </button>
-                        )}
-                        {moving === id && (
-                          <div className="move-sheet" role="group" aria-label={`Déplacer ${session.title}`}>
-                            {WEEKDAY_INITIALS.map((initial, to) => (
-                              <button key={to} type="button" aria-pressed={to === i} aria-label={WEEKDAY_NAMES[to]} onClick={() => move(id, to)}>
-                                {initial}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </section>
+              const isToday = d === today;
+              const label = (
+                <span className="day-date">
+                  <span className="day-abbr">{DAY_ABBR[i]}</span>
+                  <span className="day-num num">{dayNumber(d)}</span>
+                </span>
               );
+              if (ids.length === 0) {
+                return (
+                  <li key={d} className={`day-row is-rest${isToday ? ' is-today' : ''}`}>
+                    <div className="day-link">
+                      {label}
+                      <span className="day-title">Repos</span>
+                    </div>
+                  </li>
+                );
+              }
+              return ids.map((id) => {
+                const session = findSession(d, id);
+                if (!session) return null;
+                const done = getEntry(entries, d, id).done;
+                return (
+                  <li key={`${d}-${id}`} className={`day-row${isToday ? ' is-today' : ''}${done ? ' is-done' : ''}`} style={kindStyle(session.kind)}>
+                    <a className="day-link" href={href('seance', d, id)}>
+                      {label}
+                      <span className="day-text">
+                        <span className="day-title">{session.title}</span>
+                        <span className="day-sub">
+                          {session.minutes} min{moves[id] !== undefined ? ' · déplacée' : ''}
+                        </span>
+                      </span>
+                      {done ? (
+                        <span className="day-check">
+                          <Icon name="check" size={16} />
+                          <span className="sr-only">Faite</span>
+                        </span>
+                      ) : isToday ? (
+                        <span className="day-today">Aujourd’hui</span>
+                      ) : null}
+                    </a>
+                    {!done && (
+                      <button type="button" className="day-move" aria-expanded={moving === id} aria-label={`Déplacer ${session.title}`} onClick={() => setMoving(moving === id ? null : id)}>
+                        <Icon name="move" size={18} />
+                      </button>
+                    )}
+                    {moving === id && (
+                      <div className="move-sheet" role="group" aria-label={`Déplacer ${session.title} au`}>
+                        {WEEKDAY_INITIALS.map((initial, to) => (
+                          <button key={to} type="button" aria-pressed={to === i} aria-label={WEEKDAY_NAMES[to]} onClick={() => move(id, to)}>
+                            {initial}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </li>
+                );
+              });
             })}
-          </div>
+          </ul>
 
-          <section className="panel speed-panel" style={kindStyle('vitesse')}>
-            <p className="panel-head">
-              Vitesse de swing
-              <span className="num">
-                {speed} sur {SPEED_PER_WEEK}
-              </span>
-            </p>
-            <p className="muted small">Au practice, sans jour fixe. Évite deux jours de suite.</p>
-            {monday === mondayOf(today) && (
-              <button type="button" className="button" onClick={() => go('seance', today, 'vitesse')}>
-                <Icon name="golf" size={20} />
-                Je suis au practice
-              </button>
-            )}
-          </section>
+          <button type="button" className="row-link" style={kindStyle('vitesse')} onClick={() => go('seance', thisWeek ? today : monday, 'vitesse')}>
+            <span className="row-icon">
+              <Icon name="golf" size={20} />
+            </span>
+            <span className="row-text">
+              <span className="row-title">Vitesse de swing</span>
+              <span className="row-sub">Au practice, sans jour fixe</span>
+            </span>
+            <span className="row-value num">
+              {speed}/{SPEED_PER_WEEK}
+            </span>
+          </button>
         </>
       )}
     </main>
   );
 }
 
-/** Frise des blocs jusqu'à la saison, avec la semaine affichée. */
-function Timeline({ monday }: { monday: string }) {
+/** Les blocs jusqu'à la saison, avec l'avancée dans le bloc en cours. */
+function BlocBar({ monday }: { monday: string }) {
   const starts = blocStarts();
-  const total = starts.reduce((n, s) => n + s.bloc.weeks, 0);
   const index = weekInfo(monday).index;
-  const marker = Math.max(0, Math.min(index, total - 1));
   return (
-    <section className="panel timeline-panel">
-      <div className="timeline" role="img" aria-label={`Frise des blocs. Semaine ${index + 1} du programme.`}>
-        {starts.map(({ bloc, monday: start }, i) => {
-          const before = starts.slice(0, i).reduce((n, s) => n + s.bloc.weeks, 0);
-          const current = index >= before && index < before + bloc.weeks;
-          return (
-            <div key={bloc.id} className={`timeline-bloc${current ? ' is-current' : ''}`} style={{ flexGrow: bloc.weeks }}>
-              <span className="timeline-name">{bloc.name.replace('-', '-​')}</span>
-              <span className="timeline-date num">{capitalize(shortDate(start))}</span>
-            </div>
-          );
-        })}
-        {index >= 0 && <span className="timeline-marker" style={{ left: `${((marker + 0.5) / total) * 100}%` }} />}
-      </div>
-    </section>
+    <div className="bloc-bar" role="img" aria-label={`Semaine ${index + 1} du programme`}>
+      {starts.map(({ bloc }, i) => {
+        const before = starts.slice(0, i).reduce((n, s) => n + s.bloc.weeks, 0);
+        const fill = Math.max(0, Math.min(1, (index + 1 - before) / bloc.weeks));
+        const current = index >= before && index < before + bloc.weeks;
+        return (
+          <div key={bloc.id} className={`bloc-seg${current ? ' is-current' : ''}`} style={{ flexGrow: bloc.weeks }}>
+            <span className="bloc-track">
+              <span className="bloc-fill" style={{ width: `${fill * 100}%` }} />
+            </span>
+            <span className="bloc-name">{bloc.name}</span>
+          </div>
+        );
+      })}
+    </div>
   );
 }

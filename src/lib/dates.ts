@@ -10,7 +10,17 @@ export const fromKey = (key: string) => {
   return new Date(y, m - 1, d, 12);
 };
 
-export const todayKey = () => toKey(new Date());
+/**
+ * Avant le début du programme, l'app se comporte comme si on était déjà dans la première semaine,
+ * au même jour de la semaine (aperçu demandé par Sacha). Disparaît d'elle-même le 30 novembre 2026.
+ */
+const PREVIEW_START = '2026-11-30';
+
+export const todayKey = () => {
+  const real = toKey(new Date());
+  if (real >= PREVIEW_START) return real;
+  return addDays(real, Math.ceil(diffDays(real, PREVIEW_START) / 7) * 7);
+};
 
 export const addDays = (key: string, n: number) => {
   const d = fromKey(key);
