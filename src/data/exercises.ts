@@ -910,6 +910,58 @@ type Def = [id: string, name: string, cat: Category, anim: string, muscles: stri
 
 function more(): Exercise[] {
   const defs: Def[] = [
+
+    // Mobilité du matin v2 (sans matériel)
+    ['poignets-inclinaisons', 'Inclinaisons de poignet', 'mobilite', 'wristCircles', 'Poignets, avant-bras', [
+      'Bras tendus devant toi, poings fermés, pouces vers le haut.',
+      'Incline les poignets pour monter les pouces vers toi, puis descends-les vers le sol.',
+      'C’est le mouvement d’armement du swing, sans club.',
+    ], 'Bouger les bras au lieu des poignets.'],
+    ['avant-bras-rotation-libre', 'Rotation des avant-bras', 'mobilite', 'wristCircles', 'Avant-bras, coudes', [
+      'Coudes collés au corps et pliés à 90 degrés, poings fermés devant toi.',
+      'Tourne les avant-bras pour mettre les paumes vers le plafond, puis vers le sol, le plus loin possible.',
+      'Les avant-bras tournent à chaque impact : cette rotation protège aussi les coudes.',
+    ], 'Écarter les coudes pour aller plus loin.'],
+    ['anges-au-mur', 'Anges au mur', 'mobilite', 'wallAngel', 'Épaules, haut du dos', [
+      'Dos au mur, talons à une main du mur, bas du dos, haut du dos et tête contre le mur.',
+      'Bras en W, coudes et dos des mains contre le mur, fais glisser les bras vers le haut puis reviens.',
+      'Monte seulement tant que tout reste collé au mur.',
+    ], 'Décoller le bas du dos ou les mains pour monter plus haut.', 'Fais-le allongé au sol.'],
+    ['thread-the-needle', 'Thread the needle', 'mobilite', 'tspine', 'Haut du dos, rotation du buste', [
+      'À quatre pattes, passe un bras sous le buste en suivant la main du regard, l’épaule descend vers le sol.',
+      'Ouvre ensuite ce bras vers le plafond en tournant la poitrine.',
+      'Les hanches restent immobiles : seul le haut du dos tourne.',
+    ], 'Faire tourner le bassin à la place du haut du dos.'],
+    ['w-turns', 'W Turns', 'mobilite', 'wTurns', 'Haut du dos, rotation externe des épaules', [
+      'À genoux, fesses serrées, bras en W : coudes à hauteur d’épaules, mains vers le plafond.',
+      'Tourne le buste d’un côté le plus loin possible sans bouger le bassin, en gardant les bras en W.',
+      'Reviens au centre et tourne de l’autre côté.',
+    ], 'Laisser les coudes tomber ou le bassin tourner.'],
+    ['worlds-greatest-stretch', 'World’s Greatest Stretch', 'mobilite', 'wgs', 'Hanches, ischios, haut du dos, chevilles', [
+      'Grande fente, mains au sol à l’intérieur du pied avant, genou arrière décollé.',
+      'Ouvre le bras du côté de la jambe avant vers le plafond, regard sur la main.',
+      'Repose la main, recule le bassin en tendant la jambe avant pour étirer l’ischio, puis reviens en fente.',
+    ], 'Laisser le genou arrière s’affaisser au sol.'],
+    ['chien-tete-bas-pedale', 'Chien tête en bas en pédalant', 'mobilite', 'downDog', 'Mollets, ischios, épaules', [
+      'Mains et pieds au sol, bassin vers le plafond : le corps forme un V inversé.',
+      'Plie un genou en poussant le talon de l’autre jambe vers le sol, puis alterne.',
+      'Pousse le sol avec les mains pour allonger le dos.',
+    ], 'Arrondir le dos : plie les genoux si besoin pour le garder plat.'],
+    ['t-squat', 'Charnière en T sur une jambe', 'mobilite', 'tStance', 'Hanches, ischios, équilibre', [
+      'Debout sur une jambe, bras écartés en T.',
+      'Penche le buste vers l’avant en montant la jambe arrière tendue, jusqu’à former un T.',
+      'Le bassin reste face au sol. Remonte lentement.',
+    ], 'Ouvrir le bassin sur le côté de la jambe levée.', 'Garde la pointe du pied arrière au sol.'],
+    ['pas-chasse-rotation', 'Pas chassés avec rotation', 'mobilite', 'shuffleRot', 'Hanches, rotation du buste', [
+      'Bras croisés sur la poitrine, fais un pas chassé sur le côté.',
+      'En te posant, tourne le buste vers la direction du déplacement.',
+      'Enchaîne, puis repars dans l’autre sens.',
+    ], 'Se raidir : le mouvement reste souple.'],
+    ['rotation-posture', 'Rotation en posture de golf', 'mobilite', 'postureRot', 'Rotation du buste, hanches', [
+      'Prends ta posture d’adresse, bras croisés sur la poitrine, mains sur les épaules.',
+      'Tourne les épaules comme pour la montée, puis comme pour le finish.',
+      'Le bassin reste stable en montée : la rotation vient du haut du dos.',
+    ], 'Te redresser ou perdre l’inclinaison du buste.'],
     // Mobilité du matin
     ['cou-rotations', 'Mobilité du cou', 'mobilite', 'neckTilt', 'Cou, haut du dos', [
       'Debout, épaules basses, tourne lentement la tête d’un côté puis de l’autre, le plus loin possible sans forcer.',

@@ -223,14 +223,22 @@ const mobilite: Session = {
   kind: 'mobilite',
   title: 'Mobilité du matin',
   minutes: 15,
-  anim: 'kneelRot',
-  intro: 'Au réveil, sans forcer : bouge chaque articulation dans toute son amplitude. Le but est la liberté de mouvement du swing, pas l’étirement fort.',
+  anim: 'wgs',
+  intro: 'Au réveil, sans matériel et sans forcer : des chevilles aux épaules, puis debout en posture de golf. Le but est la liberté de mouvement du swing, pas l’étirement fort.',
   blocks: [
-    { title: 'Cou et épaules', items: [one('cou-rotations', 5, true), one('epaules-cercles', 5, true), one('passages-epaules', 10), hold('etirement-dorsaux', 30)] },
-    { title: 'Poignets et avant-bras', items: [one('poignets-cercles', 10), one('poignets-appui', 10), one('poignets-armement', 10), one('avant-bras-rotation', 10)] },
-    { title: 'Colonne et rotation', items: [one('chat-vache', 8), one('livre-ouvert', 6, true), one('rotation-genou-club', 8, true)] },
-    { title: 'Hanches', items: [one('hanches-90-90', 6, true), one('rotation-interne-hanche', 8, true), one('adducteurs-balances', 10, true), one('fente-rotation', 5, true)] },
-    { title: 'Chevilles', items: [one('genou-au-mur', 10, true), one('chevilles-cercles', 8, true), hold('squat-profond', 30)] },
+    { title: 'Chevilles et poignets', items: [one('genou-au-mur', 10, true), one('chevilles-cercles', 8, true, { note: '8 dans chaque sens.' }), one('poignets-inclinaisons', 15), one('avant-bras-rotation-libre', 10)] },
+    { title: 'Épaules et colonne', items: [one('anges-au-mur', 10), one('chat-vache', 8), one('thread-the-needle', 8, true), one('w-turns', 8, true), one('worlds-greatest-stretch', 5, true)] },
+    {
+      title: 'Hanches et jambes',
+      items: [
+        one('hanches-90-90', 8, false, { note: '8 transitions, puis 30 s tenues de chaque côté.' }),
+        one('rotation-interne-hanche', 6, true),
+        one('balances-jambes', 10, true, { note: '10 d’avant en arrière, puis 10 sur le côté.' }),
+        one('chien-tete-bas-pedale', 10, true),
+        one('t-squat', 6, true),
+      ],
+    },
+    { title: 'Intégration', items: [one('pas-chasse-rotation', 8, true), one('rotation-posture', 10)] },
   ],
 };
 

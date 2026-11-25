@@ -548,6 +548,79 @@ const BALL: Prop = { t: 'ball', at: 'hands' };
 const LUNGE: Pose = { hip: [96, 136], sh: [98, 96], hA: [100, 134], fA: [126, 171], fB: [60, 168], toeB: 90 };
 
 const MORE: Record<string, Anim> = {
+
+  // Mobilité du matin v2 (sans matériel)
+  wTurns: {
+    frames: [
+      { hip: [100, 140], sh: [100, 100], hA: [82, 80], hB: [118, 80], eA: [74, 100], eB: [126, 100], kA: [92, 170], kB: [108, 170], fA: [88, 172], fB: [112, 172], toeA: 180, toeB: 0 },
+      { hip: [100, 140], sh: [97, 100], hA: [70, 78], hB: [104, 84], eA: [64, 98], eB: [114, 102], kA: [92, 170], kB: [108, 170], fA: [88, 172], fB: [112, 172], toeA: 180, toeB: 0, head: [-0.6, -0.8] },
+      { hip: [100, 140], sh: [103, 100], hA: [96, 84], hB: [130, 78], eA: [86, 102], eB: [136, 98], kA: [92, 170], kB: [108, 170], fA: [88, 172], fB: [112, 172], toeA: 180, toeB: 0, head: [0.6, -0.8] },
+    ],
+    front: true,
+    ms: 900,
+    pause: 250,
+    still: 0,
+  },
+  wgs: {
+    frames: [
+      { hip: [88, 140], sh: [127, 133], hA: [134, 173], hB: [122, 173], fA: [128, 171], fB: [42, 165], toeB: 90 },
+      { hip: [88, 140], sh: [127, 133], hA: [122, 93], hB: [122, 173], fA: [128, 171], fB: [42, 165], toeB: 90 },
+      { hip: [92, 127], sh: [130, 141], hA: [126, 173], hB: [134, 173], fA: [128, 171], fB: [42, 165], toeA: -30, toeB: 90 },
+    ],
+    knee: [1, -1],
+    kneeB: [0, 1],
+    ms: 800,
+    pause: 400,
+    still: 1,
+  },
+  downDog: {
+    frames: [
+      { hip: [92, 118], sh: [122, 144], hA: [150, 173], fA: [58, 171], fB: [66, 164], toeA: 180, toeB: 150 },
+      { hip: [92, 118], sh: [122, 144], hA: [150, 173], fA: [66, 164], fB: [58, 171], toeA: 150, toeB: 180 },
+    ],
+    knee: [1, -0.2],
+    ms: 700,
+    pause: 200,
+  },
+  tStance: {
+    frames: [
+      { ...STAND, fB: [97, 171] },
+      { hip: [96, 112], sh: [136, 108], hA: [134, 140], fA: [100, 171], fB: [42, 108], toeB: 180 },
+    ],
+    knee: [1, -0.2],
+    ms: 1300,
+    pause: 600,
+    still: 1,
+  },
+  shuffleRot: {
+    frames: [
+      { hip: [92, 112], sh: [92, 72], hA: [86, 92], hB: [100, 92], fA: [80, 171], fB: [104, 171], toeA: 180, toeB: 0 },
+      { hip: [110, 114], sh: [112, 74], hA: [120, 88], hB: [134, 94], fA: [88, 171], fB: [132, 171], toeA: 180, toeB: 0, head: [0.5, -0.85] },
+    ],
+    front: true,
+    ms: 600,
+    pause: 250,
+  },
+  postureRot: {
+    frames: [
+      { hip: [100, 116], sh: [100, 78], hA: [94, 94], hB: [106, 94], fA: [84, 171], fB: [116, 171], toeA: 180, toeB: 0 },
+      { hip: [99, 116], sh: [94, 78], hA: [78, 90], hB: [90, 96], fA: [84, 171], fB: [116, 171], toeA: 180, toeB: 0 },
+      { hip: [101, 116], sh: [106, 78], hA: [110, 96], hB: [122, 90], fA: [84, 171], fB: [116, 171], toeA: 180, toeB: 0 },
+    ],
+    front: true,
+    ms: 800,
+    pause: 300,
+    still: 1,
+  },
+  wallAngel: {
+    frames: [
+      { hip: [100, 110], sh: [100, 70], hA: [78, 56], hB: [122, 56], eA: [68, 76], eB: [132, 76], ...FRONT_FEET },
+      { hip: [100, 110], sh: [100, 70], hA: [90, 28], hB: [110, 28], eA: [76, 48], eB: [124, 48], ...FRONT_FEET },
+    ],
+    front: true,
+    ms: 1200,
+    pause: 200,
+  },
   // Mobilité
   neckTilt: {
     frames: [
