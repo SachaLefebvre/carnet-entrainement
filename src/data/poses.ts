@@ -79,11 +79,13 @@ const run: Anim = {
   frames: [
     { hip: [98, 108], sh: [106, 69], hA: [86, 100], hB: [124, 86], fA: [114, 144], fB: [70, 158], toeA: 20, toeB: 70 },
     { hip: [98, 108], sh: [106, 69], hA: [124, 86], hB: [86, 100], fA: [70, 158], fB: [114, 144], toeA: 70, toeB: 20 },
+    { hip: [100, 112], sh: [110, 73], hA: [84, 104], hB: [128, 88], fA: [112, 171], fB: [66, 148], toeA: 0, toeB: 60 },
   ],
   elbow: [-0.4, 1],
+  knee: [1, 0.3],
   ms: 330,
   pause: 0,
-  still: 0,
+  still: 2,
 };
 
 // Figures : appui sur deux parallettes (ou deux chaises), mains à hauteur de bassin.
@@ -417,6 +419,7 @@ const BASE: Record<string, Anim> = {
     ],
     knee: [0, -1],
     kneeB: [0, -1],
+    still: 1,
   },
   skater: {
     frames: [
@@ -965,6 +968,7 @@ const MORE: Record<string, Anim> = {
     ms: 330,
     pause: 650,
     props: [{ t: 'ball', at: 'hA' }],
+    still: 0,
   },
 
   // Force
@@ -1024,6 +1028,7 @@ const MORE: Record<string, Anim> = {
       { hip: [92, 140], sh: [58, 165], hA: [96, 170], fA: [126, 171], head: [-1, 0] },
     ],
     knee: [0, -1],
+    still: 1,
   },
   nordic: {
     frames: [

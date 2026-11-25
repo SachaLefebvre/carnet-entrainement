@@ -14,6 +14,8 @@ const SHIN = 31;
 const FOOT = 11;
 const HEAD = 9.5;
 const GROUND = 175;
+/** Animation réservée à la planche de contrôle. */
+const LIVE = typeof location !== 'undefined' && location.pathname.endsWith('dev.html') && location.search.includes('live');
 
 const add = (a: Pt, b: Pt): Pt => [a[0] + b[0], a[1] + b[1]];
 const sub = (a: Pt, b: Pt): Pt => [a[0] - b[0], a[1] - b[1]];
@@ -294,9 +296,12 @@ interface Props {
 
 export function Figure({ anim: animId, playing = false, className, label, frame }: Props) {
   const anim = ANIMS[animId] ?? ANIMS.stand;
-  const time = usePlayhead(playing);
+  // Depuis la v4 le personnage est toujours figé sur la pose qui définit l'exercice (demande de Sacha).
+  // L'animation reste disponible pour la planche de contrôle (dev.html?live).
+  const animate = playing && LIVE;
+  const time = usePlayhead(animate);
   const still = complete(anim.frames[Math.min(frame ?? anim.still ?? anim.frames.length - 1, anim.frames.length - 1)]);
-  const s = solve(anim, playing ? poseAt(anim, time) : still);
+  const s = solve(anim, animate ? poseAt(anim, time) : still);
   const ground = anim.ground ?? true;
   const box = useMemo(() => frameOf(anim), [anim]);
   const bottom = ground ? GROUND + 4.5 : box.y + box.h - 3;
