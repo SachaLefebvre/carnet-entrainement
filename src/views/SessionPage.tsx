@@ -18,6 +18,7 @@ export function SessionPage({ day, id }: { day: string; id: string }) {
   const entry = getEntry(entries, day, id);
   const [km, setKm] = useState(entry.data.distanceKm ? String(entry.data.distanceKm).replace('.', ',') : '');
   const [time, setTime] = useState(entry.data.timeSec ? formatClock(entry.data.timeSec) : '');
+  const [hr, setHr] = useState(entry.data.hr ? String(entry.data.hr) : '');
   const [open, setOpen] = useState<number[]>([]);
 
   if (!session) {
@@ -33,7 +34,7 @@ export function SessionPage({ day, id }: { day: string; id: string }) {
   const isRun = Boolean(session.run);
   const isSpeed = session.kind === 'vitesse';
   const contacts = contactCount(session);
-  const guided = Boolean(session.phases) || exerciseCount(session) > 0;
+  const guided = exerciseCount(session) > 0;
   const resume = resumableSession(day) === id;
   const dateLabel = day === today ? 'Aujourd’hui' : `${capitalize(weekdayName(day))} ${dayAndMonth(day)}`;
   const count = exerciseCount(session);
@@ -41,13 +42,16 @@ export function SessionPage({ day, id }: { day: string; id: string }) {
   const seconds = parseClock(time);
   const pace = distance > 0 && seconds ? seconds / distance : null;
 
+  const runValid = distance > 0 && distance < 100 && Boolean(seconds);
+  const bpm = Number(hr);
+  const hrValid = hr.trim() === '' || (Number.isFinite(bpm) && bpm >= 60 && bpm <= 230);
+
   const saveRun = () => {
-    const data = { ...entry.data };
-    if (distance > 0) data.distanceKm = distance;
-    else delete data.distanceKm;
-    if (seconds) data.timeSec = seconds;
-    else delete data.timeSec;
-    updateEntry(day, id, { data });
+    if (!runValid || !hrValid) return;
+    const data = { ...entry.data, distanceKm: distance, timeSec: seconds ?? undefined };
+    if (hr.trim()) data.hr = Math.round(bpm);
+    else delete data.hr;
+    updateEntry(day, id, { done: true, data });
     // Le 5 km de la semaine de tests alimente directement le record (ramené à 5 km pile).
     if (session.runTest && seconds && distance >= 4.9) updateEntry(day, testKey(session.runTest), { done: true, data: { value: Math.round((seconds * 5) / distance) } });
   };
@@ -79,9 +83,42 @@ export function SessionPage({ day, id }: { day: string; id: string }) {
 
       <p className="lead">{session.intro}</p>
 
-      {entry.done && (entry.data.durationSec || recorded.length > 0) && (
+      {isRun && (
+        <section className="panel run-result">
+          <p className="panel-head">Ton résultat</p>
+          <p className="muted small">
+            {session.runTest ? 'Reporte la distance et le temps de Strava : ton 5 km est enregistré comme test.' : 'Après ta course, reporte ce que Strava a mesuré.'}
+          </p>
+          <div className="field-row">
+            <label className="field">
+              <span>Distance (km)</span>
+              <input inputMode="decimal" placeholder="8,5" value={km} onChange={(e) => setKm(e.target.value)} />
+            </label>
+            <label className="field">
+              <span>Temps (min:s)</span>
+              <input inputMode="text" placeholder="52:30" value={time} onChange={(e) => setTime(e.target.value)} />
+            </label>
+          </div>
+          <label className="field">
+            <span>Fréquence cardiaque moyenne (facultatif)</span>
+            <input inputMode="numeric" placeholder="152" value={hr} onChange={(e) => setHr(e.target.value)} />
+          </label>
+          {pace && (
+            <p className="pace">
+              <span className="num">{formatClock(pace)}</span> au km, pour {formatKm(distance)} km
+            </p>
+          )}
+          {time !== '' && seconds === null && <p className="error">Écris le temps sous la forme 52:30, ou 1:05:30 au-delà d’une heure.</p>}
+          {!hrValid && <p className="error">La fréquence cardiaque doit être entre 60 et 230.</p>}
+          <button type="button" className="button primary" disabled={!runValid || !hrValid} onClick={saveRun}>
+            {entry.done ? 'Mettre à jour la course' : 'Enregistrer la course'}
+          </button>
+        </section>
+      )}
+
+      {(entry.done || isRun) && (entry.data.durationSec || recorded.length > 0) && (
         <section className="panel">
-          <p className="panel-head">Ce que tu as fait</p>
+          <p className="panel-head">{isRun ? 'Ton échauffement' : 'Ce que tu as fait'}</p>
           {entry.data.durationSec ? <p className="muted">Durée : {formatMinutes(entry.data.durationSec)}</p> : null}
           {recorded.length > 0 && (
             <ul className="recorded">
@@ -100,29 +137,6 @@ export function SessionPage({ day, id }: { day: string; id: string }) {
       )}
 
       {isSpeed && <SpeedForm day={day} />}
-
-      {isRun && (
-        <section className="panel">
-          <p className="panel-head">Ta course</p>
-          <p className="muted">{session.runTest ? 'Reporte la distance et le temps : ton 5 km est enregistré comme test.' : 'Facultatif. Reporte la distance et le temps de ta montre pour suivre ton allure ici.'}</p>
-          <div className="field-row">
-            <label className="field">
-              <span>Distance (km)</span>
-              <input inputMode="decimal" placeholder="8,5" value={km} onChange={(e) => setKm(e.target.value)} onBlur={saveRun} />
-            </label>
-            <label className="field">
-              <span>Temps (min:s)</span>
-              <input inputMode="text" placeholder="52:30" value={time} onChange={(e) => setTime(e.target.value)} onBlur={saveRun} />
-            </label>
-          </div>
-          {pace && (
-            <p className="pace">
-              <span className="num">{formatClock(pace)}</span> au km, pour {formatKm(distance)} km
-            </p>
-          )}
-          {time !== '' && seconds === null && <p className="error">Écris le temps sous la forme 52:30.</p>}
-        </section>
-      )}
 
       {session.blocks.length > 0 && (
         <div className="blocks">
@@ -189,12 +203,15 @@ export function SessionPage({ day, id }: { day: string; id: string }) {
             {guided && (
               <button type="button" className="button primary" onClick={() => go('go', day, id)}>
                 <Icon name="play" size={20} />
-                {resume ? 'Reprendre la séance' : session.phases ? 'Lancer le minuteur' : 'Démarrer la séance'}
+                {resume ? 'Reprendre la séance' : isRun ? 'Démarrer l’échauffement' : 'Démarrer la séance'}
               </button>
             )}
-            <button type="button" className={guided ? 'button ghost' : 'button primary'} onClick={() => updateEntry(day, id, { done: true })}>
-              {guided ? 'Déjà faite, la valider' : 'Marquer comme faite'}
-            </button>
+            {!isRun && (
+              <button type="button" className={guided ? 'button ghost' : 'button primary'} onClick={() => updateEntry(day, id, { done: true })}>
+                {guided ? 'Déjà faite, la valider' : 'Marquer comme faite'}
+              </button>
+            )}
+            {isRun && !guided && <p className="muted small action-hint">Note ton résultat ci-dessus après ta course.</p>}
           </>
         )}
       </div>

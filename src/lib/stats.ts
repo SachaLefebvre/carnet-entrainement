@@ -160,8 +160,8 @@ export function totals(entries: Entries, from: string, to: string): Totals {
   for (const { day, session, entry } of journal(entries)) {
     if (day < from || day > to) continue;
     result.sessions += 1;
-    // Sans durée chronométrée, on retient la durée prévue pour les courses dont le temps a été saisi.
-    result.seconds += entry.data.durationSec ?? entry.data.timeSec ?? 0;
+    // Course : durée de l'échauffement guidé plus le temps de course saisi (mesuré sur Strava).
+    result.seconds += (entry.data.durationSec ?? 0) + (entry.data.timeSec ?? 0);
     result.reps += sessionReps(session, entry);
     result.km += entry.data.distanceKm ?? 0;
   }
@@ -225,8 +225,9 @@ export function summarize(session: Session, entry: Entry): string {
   if (data.distanceKm) parts.push(`${formatKm(data.distanceKm)} km`);
   if (data.timeSec) parts.push(formatClock(data.timeSec));
   if (data.distanceKm && data.timeSec) parts.push(`${formatClock(data.timeSec / data.distanceKm)} au km`);
+  if (data.hr) parts.push(`${data.hr} bpm`);
   if (data.max) parts.push(`${data.max} ${speedUnit()} au max${data.avg ? `, ${data.avg} de moyenne` : ''}`);
-  if (data.durationSec) parts.push(formatMinutes(data.durationSec));
+  if (data.durationSec && !session.run) parts.push(formatMinutes(data.durationSec));
   const reps = sessionReps(session, entry);
   if (reps) parts.push(`${reps} répétitions`);
   if (!parts.length && entry.note) parts.push(entry.note);

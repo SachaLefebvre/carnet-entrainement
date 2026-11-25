@@ -3107,3 +3107,8 @@ h1 {
 .link-list .row-icon {
   color: var(--accent);
 }
+
+/* Course : résultat saisi après la course (mesurée sur Strava). */
+.run-result { border-color: color-mix(in srgb, var(--course) 45%, var(--line)); }
+.run-result .button { width: 100%; margin-top: 8px; }
+.action-hint { text-align: center; margin: 0; }

@@ -12,6 +12,8 @@ export interface EntryData {
   sets?: Record<string, number[]>;
   distanceKm?: number;
   timeSec?: number;
+  /** Fréquence cardiaque moyenne d'une course, en battements par minute. */
+  hr?: number;
   /** Résultat d'un test. */
   value?: number;
   /** Charge utilisée par exercice (élastique, kettlebell, médecine-ball). */

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Figure } from '../components/Figure';
 import { EXERCISES } from '../data/exercises';
-import { findSession, TEST_BY_ID, type Equip, type Item, type Phase, type Session } from '../data/programme';
+import { findSession, TEST_BY_ID, type Equip, type Item, type Session } from '../data/programme';
 import { EQUIP_LABEL, lastLoad, LOADS } from '../lib/adjust';
 import { back, replace } from '../lib/router';
 import { beep, buzz, keepAwake } from '../lib/sound';
@@ -14,8 +14,7 @@ import { Icon, kindStyle, Ring } from '../ui';
 
 type Step =
   | { type: 'work'; item: Item; block: string; set: number; side?: string }
-  | { type: 'rest'; seconds: number }
-  | { type: 'phase'; phase: Phase; number: number; total: number };
+  | { type: 'rest'; seconds: number };
 
 interface Saved {
   day: string;
@@ -66,8 +65,7 @@ export function buildSteps(session: Session): Step[] {
       if (item.rest > 0 && !isLast) steps.push({ type: 'rest', seconds: item.rest });
     }
   });
-  // Course : l'échauffement (corde, tibias) puis le minuteur des phases.
-  if (session.phases) session.phases.forEach((phase, i, all) => steps.push({ type: 'phase', phase, number: i + 1, total: all.length }));
+  // Course : seul l'échauffement est guidé. La course elle-même se mesure sur Strava, le résultat se saisit ensuite.
   return steps;
 }
 
@@ -277,7 +275,8 @@ export function Player({ day, id }: { day: string; id: string }) {
     const entry = getEntry(entries, day, id);
     const sets = Object.fromEntries(Object.entries(state.sets).filter(([, values]) => values.length > 0));
     const loads = { ...(entry.data.loads ?? {}), ...(state.loads ?? {}) };
-    updateEntry(day, id, { done: true, note, data: { ...entry.data, durationSec: Math.round(elapsed), sets, ...(Object.keys(loads).length ? { loads } : {}) } });
+    // Pour une course, la séance n'est validée qu'avec le résultat saisi après la course.
+    updateEntry(day, id, { done: !session.run, note, data: { ...entry.data, durationSec: Math.round(elapsed), sets, ...(Object.keys(loads).length ? { loads } : {}) } });
     for (const [testId, value] of Object.entries(state.tests ?? {})) updateEntry(day, testKey(testId), { done: true, data: { value } });
     store(null);
     replace('seance', day, id);
@@ -291,8 +290,8 @@ export function Player({ day, id }: { day: string; id: string }) {
           <span className="finish-badge">
             <Icon name="check" size={44} />
           </span>
-          <h1>Séance terminée</h1>
-          <p className="muted">{session.title}</p>
+          <h1>{session.run ? 'Échauffement terminé' : 'Séance terminée'}</h1>
+          <p className="muted">{session.run ? 'Bonne course ! Lance Strava, et reviens noter ta distance et ton temps à la fin.' : session.title}</p>
           <dl className="facts">
             <div>
               <dt>Durée</dt>
@@ -316,7 +315,7 @@ export function Player({ day, id }: { day: string; id: string }) {
         </div>
         <div className="player-actions">
           <button type="button" className="button primary" onClick={save}>
-            Enregistrer la séance
+            {session.run ? 'Enregistrer l’échauffement' : 'Enregistrer la séance'}
           </button>
           <button type="button" className="button ghost" onClick={previous}>
             Revenir à la dernière étape
@@ -351,7 +350,6 @@ export function Player({ day, id }: { day: string; id: string }) {
         />
       )}
       {step.type === 'rest' && <RestStep key={state.index} seconds={step.seconds} next={nextWork} onDone={() => advance()} />}
-      {step.type === 'phase' && <PhaseStep key={state.index} step={step} first={step.number === 1} anim={session.anim} onDone={() => advance()} />}
 
       <footer className="player-foot">
         <button type="button" className="text-link as-button" onClick={previous} disabled={state.index === 0}>
@@ -522,46 +520,6 @@ function RestStep({ seconds, next, onDone }: { seconds: number; next?: Extract<S
         </button>
         <button type="button" className="button primary" onClick={onDone}>
           Passer le repos
-        </button>
-      </div>
-    </>
-  );
-}
-
-function PhaseStep({ step, first, anim, onDone }: { step: Extract<Step, { type: 'phase' }>; first: boolean; anim: string; onDone: () => void }) {
-  const { phase } = step;
-  // La première phase attend ton départ ; les suivantes s'enchaînent seules.
-  const timer = useCountdown(step.number, phase.seconds, !first, onDone);
-  const started = timer.running || timer.remaining < phase.seconds;
-  return (
-    <>
-      <div className={`player-body is-centered${phase.fast ? ' is-fast' : ''}`}>
-        <p className="overline">
-          Phase {step.number} sur {step.total}
-        </p>
-        <h1>{phase.label}</h1>
-        <Ring value={timer.remaining / phase.seconds} size={220} stroke={12} label={`${formatClock(timer.remaining)} restantes`}>
-          <span className="ring-huge num">{formatClock(Math.ceil(timer.remaining))}</span>
-        </Ring>
-        <div className="phase-figure">
-          <Figure anim={phase.fast ? 'sprint' : anim === 'sprint' ? 'run' : anim} playing={timer.running} label="" />
-        </div>
-        <p className="muted small">Garde l’écran allumé pour entendre les signaux de changement de phase.</p>
-      </div>
-      <div className="player-actions is-row">
-        {timer.running ? (
-          <button type="button" className="button" onClick={timer.pause}>
-            <Icon name="pause" size={20} />
-            Pause
-          </button>
-        ) : (
-          <button type="button" className="button primary" onClick={timer.start}>
-            <Icon name="play" size={20} />
-            {started ? 'Reprendre' : 'Démarrer'}
-          </button>
-        )}
-        <button type="button" className="button ghost" onClick={onDone}>
-          Phase suivante
         </button>
       </div>
     </>

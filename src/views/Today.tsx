@@ -15,7 +15,7 @@ function greeting() {
   return 'Bonsoir';
 }
 
-const guided = (s: Session) => Boolean(s.phases) || exerciseCount(s) > 0;
+const guided = (s: Session) => exerciseCount(s) > 0;
 
 export function Today() {
   const { entries } = useStore();
